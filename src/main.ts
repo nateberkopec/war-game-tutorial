@@ -3,7 +3,7 @@
  * Integrates engine, UI, and persistence systems.
  */
 
-import { WarGameEngine, type PlayerId, type GameStats, QUICK_CONFIG } from './engine'
+import { WarGameEngine, type PlayerId, type GameStats, type RulePreset, getPreset } from './engine'
 import {
   GameScene,
   showTitleScreen,
@@ -70,16 +70,21 @@ async function init(): Promise<void> {
     defaultPlayer2Name: 'Player 2',
   })
   
-  // Start the game with the player names and optional seed
-  startGame(result.player1Name, result.player2Name, result.seed)
+  // Start the game with the player names, preset, and optional seed
+  startGame(result.player1Name, result.player2Name, result.preset, result.seed)
 }
 
 // =============================================================================
 // Game Flow
 // =============================================================================
 
-async function startGame(player1Name: string, player2Name: string, seed?: string): Promise<void> {
-  console.log(`Starting game: ${player1Name} vs ${player2Name}${seed ? ` (seed: ${seed})` : ''}`)
+async function startGame(
+  player1Name: string,
+  player2Name: string,
+  preset: RulePreset = 'classic',
+  seed?: string
+): Promise<void> {
+  console.log(`Starting game: ${player1Name} vs ${player2Name} (${preset} mode)${seed ? ` [seed: ${seed}]` : ''}`)
 
   // Clean up previous game UI if any
   if (gameUI) {
@@ -89,16 +94,22 @@ async function startGame(player1Name: string, player2Name: string, seed?: string
     gameUI = null
   }
 
-  // Create engine - check for quick mode via URL param (for testing)
+  // Create engine with selected preset
+  // Check for quick mode override via URL param (for testing)
   const urlParams = new URLSearchParams(window.location.search)
   const quickMode = urlParams.get('quick') === 'true'
   
+  let config
   if (quickMode) {
-    console.log('Quick mode enabled - first to 30 cards wins!')
+    console.log('Quick mode enabled via URL param - overriding preset')
+    config = { ...getPreset('quick'), seed }
+  } else if (preset !== 'custom') {
+    config = { ...getPreset(preset), seed }
+  } else {
+    config = seed ? { seed } : undefined
   }
   
-  const config = quickMode ? { ...QUICK_CONFIG, seed } : { seed }
-  engine = new WarGameEngine(config)
+  engine = config ? new WarGameEngine(config) : new WarGameEngine()
   engine.setPlayers(
     { id: 'player1', name: player1Name },
     { id: 'player2', name: player2Name }
@@ -501,13 +512,13 @@ async function handleGameEnd(winner: PlayerId, stats: GameStats): Promise<void> 
         defaultPlayer1Name: state.players.player1.name,
         defaultPlayer2Name: state.players.player2.name,
       })
-      startGame(result.player1Name, result.player2Name, result.seed)
+      startGame(result.player1Name, result.player2Name, result.preset, result.seed)
     },
     onMainMenu: async () => {
       victoryScreen.hide()
       victoryScreen.dispose()
       const result = await showTitleScreen({})
-      startGame(result.player1Name, result.player2Name, result.seed)
+      startGame(result.player1Name, result.player2Name, result.preset, result.seed)
     }
   })
   victoryScreen.show()
@@ -538,13 +549,13 @@ async function handleGameDraw(reason: string, stats: GameStats): Promise<void> {
         defaultPlayer1Name: state.players.player1.name,
         defaultPlayer2Name: state.players.player2.name,
       })
-      startGame(result.player1Name, result.player2Name, result.seed)
+      startGame(result.player1Name, result.player2Name, result.preset, result.seed)
     },
     onMainMenu: async () => {
       victoryScreen.hide()
       victoryScreen.dispose()
       const result = await showTitleScreen({})
-      startGame(result.player1Name, result.player2Name, result.seed)
+      startGame(result.player1Name, result.player2Name, result.preset, result.seed)
     }
   })
   victoryScreen.show()
