@@ -9,6 +9,8 @@
  * - Saves: Game save/load management
  * - Replays: Replay storage and retrieval
  * - Migration: Data versioning and migration
+ * - Quota: Storage quota handling and cleanup
+ * - Validation: Data validation and repair
  */
 
 // Storage
@@ -93,3 +95,33 @@ export {
   dataNeedsMigration,
   type MigrationResult,
 } from './migration'
+
+// Quota handling
+export {
+  StorageQuotaError,
+  getStorageUsage,
+  formatBytes,
+  tryWrite,
+  isQuotaError,
+  getCleanupSuggestions,
+  executeCleanup,
+  clearAllData,
+  checkStorageHealth,
+  type StorageUsage,
+  type CleanupSuggestion,
+  type StorageHealth,
+} from './quota'
+
+// Validation
+export {
+  validateProfile,
+  validateSavedGame,
+  validateReplay,
+  validateSettings,
+  safeLoadProfile,
+  safeLoadSavedGame,
+  safeLoadReplay,
+  safeLoadSettings,
+  repairProfile,
+  type ValidationResult,
+} from './validation'
