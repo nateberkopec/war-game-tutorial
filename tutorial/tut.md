@@ -108,5 +108,14 @@ PROMPT:
 Let's think, how are they gonna coordinate? I'd like to use git, github, git worktrees, and 4 opencode windows. Write out our coordination strategy at the top of PLAN.md.
 ```
 
+And then one last:
+PROMPT:
+```
+Ultrathink through the entire PLAN.md and SPEC.md so far. Do you see any landmines, inconsistenicies, logic errors or anything else we need to address before implementation
+```
+
+Ultrathink here causes Claude to use more tokens.
+
 Ok 15 minutes left fuck, time to motor. Let's launch this fucker and go.
 
+At this point I'm gonna close that main agent window we've been using (you can pick up and resume this later).

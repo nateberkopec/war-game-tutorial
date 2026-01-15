@@ -249,7 +249,7 @@ All workstreams can begin in parallel. Minimal coordination needed.
   - Elimination (default)
   - First to N cards
   - Most cards after N rounds
-  - Timed game support
+  - (Timed games deferred to v2)
 
 **Deliverable**: Engine that can run a complete game via `draw()` calls, emitting events
 
@@ -517,7 +517,7 @@ Before Phase 3, ensure:
 - [ ] **1.13** Handle All Edge Cases
   - Simultaneous empty decks
   - Multiple nested wars exhausting both decks
-  - Timed game edge cases
+  - Round-limited games ending in ties
 
 - [ ] **1.14** Performance Optimization
   - Profile and optimize hot paths

@@ -34,6 +34,21 @@ A browser-based implementation of the classic card game War for two players in h
 ### Card Rankings (Low to High)
 2, 3, 4, 5, 6, 7, 8, 9, 10, J, Q, K, A
 
+### Card Identification
+Each card has a unique ID for tracking through the game and enabling deterministic replays.
+
+**Format:** `{deckIndex}-{suit}-{rank}`
+
+**Examples:**
+- `0-hearts-A` - Ace of Hearts from deck 0
+- `0-spades-10` - Ten of Spades from deck 0
+- `1-diamonds-K` - King of Diamonds from deck 1 (in multi-deck games)
+
+This format is:
+- **Deterministic:** Same seed produces same card IDs
+- **Unique:** No collisions within a game
+- **Readable:** Easy to debug and inspect
+
 ## User Experience
 
 ### Game Flow
@@ -251,7 +266,7 @@ interface GameConfig {
     | { type: 'elimination' }                    // Default: opponent has 0 cards
     | { type: 'firstTo', count: number }         // First to N cards wins
     | { type: 'rounds', count: number }          // Most cards after N rounds
-    | { type: 'timed', seconds: number }         // Most cards when timer ends
+    // Note: Timed games deferred to v2 (requires timer UI, pause/resume, additional events)
   
   // Card collection
   shuffleWonCards: boolean       // Shuffle won cards before adding to deck
@@ -259,6 +274,26 @@ interface GameConfig {
   
   // Randomization
   seed?: string                  // For reproducible games / replays
+}
+```
+
+### Core Types
+
+```typescript
+// Player identification
+type PlayerId = 'player1' | 'player2'
+
+// Lightweight player info for game sessions (not the full profile)
+interface Player {
+  id: PlayerId
+  name: string
+  profileId?: string  // Optional link to persistent profile
+}
+
+// Minimal player info for replays/summaries
+interface PlayerInfo {
+  name: string
+  profileId?: string
 }
 ```
 
@@ -271,7 +306,7 @@ type GameEvent =
   | { type: 'gameStarted', config: GameConfig, players: [Player, Player] }
   | { type: 'roundStarted', roundNumber: number }
   | { type: 'cardsDrawn', cards: { player1: Card, player2: Card } }
-  | { type: 'comparison', result: 'player1' | 'player2' | 'tie', cards: [Card, Card] }
+  | { type: 'comparison', result: PlayerId | 'tie', cards: [Card, Card] }
   | { type: 'roundWon', winner: PlayerId, cardsWon: Card[] }
   | { type: 'warStarted', depth: number }
   | { type: 'warFaceDownPlaced', player: PlayerId, count: number }
@@ -300,26 +335,28 @@ interface GameState {
     player2: PlayerState
   }
   
+  // Battlefield tracks cards currently in play
+  // During a normal round: each player has 1 face-up card, warPile is empty
+  // During war: face-up cards from comparison, plus warPile accumulates all cards at stake
   battlefield: {
-    player1Cards: Card[]         // Face-up cards in current battle
-    player2Cards: Card[]
-    warPile: Card[]              // All cards at stake
+    player1FaceUp: Card | null   // Current face-up card (the one being compared)
+    player2FaceUp: Card | null
+    player1FaceDown: Card[]      // Face-down cards placed during war
+    player2FaceDown: Card[]
+    warPile: Card[]              // All cards accumulated during war sequence
   }
   
   currentRound: number
   warDepth: number               // 0 = normal round, 1+ = nested war
-  
-  // For timed games
-  startTime?: number
-  elapsedTime?: number
   
   // Random state for replay
   rngState: string
 }
 
 interface PlayerState {
-  id: string
-  profileId: string              // Link to persistent profile
+  id: PlayerId
+  name: string
+  profileId?: string             // Optional link to persistent profile
   deck: Card[]
   cardsWon: number               // Running total for this game
 }
@@ -327,9 +364,21 @@ interface PlayerState {
 interface Card {
   suit: 'hearts' | 'diamonds' | 'clubs' | 'spades'
   rank: string                   // '2'-'10', 'J', 'Q', 'K', 'A'
-  id: string                     // Unique ID for tracking through game
+  id: string                     // Unique ID: "{deckIndex}-{suit}-{rank}" e.g. "0-hearts-A"
 }
 ```
+
+**Battlefield Flow:**
+1. **Normal round start:** Both `faceUp` are null, `faceDown` arrays empty, `warPile` empty
+2. **Cards drawn:** Each player's top card goes to their `faceUp` slot
+3. **Comparison:** Winner determined, all cards move to `warPile`
+4. **Round won:** Winner collects `warPile` to bottom of their deck, battlefield resets
+
+**War sequence:**
+1. **Tie detected:** Both `faceUp` cards move to `warPile`
+2. **Face-down placed:** Each player places N cards in their `faceDown` array
+3. **War cards drawn:** New cards go to `faceUp` slots
+4. **Comparison:** If tie, repeat from step 1 (nested war). If winner, they collect entire `warPile` + all `faceDown` cards + both `faceUp` cards
 
 ### Save/Load System
 
@@ -517,8 +566,9 @@ class WarGameEngine {
   static fromSave(save: SavedGame): WarGameEngine
   static fromReplay(replay: Replay): WarGameEngine
   
-  // Game setup
-  setPlayers(p1: PlayerProfile, p2: PlayerProfile): void
+  // Game setup - uses lightweight Player, not full PlayerProfile
+  // The engine only needs names and optional profile IDs for tracking
+  setPlayers(p1: Player, p2: Player): void
   start(): void
   
   // Core gameplay (UI calls these)
