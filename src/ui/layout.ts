@@ -187,3 +187,230 @@ export function getResponsiveScale(aspectRatio: number): number {
     return 1.0
   }
 }
+
+/**
+ * Device type detection.
+ */
+export type DeviceType = 'mobile' | 'tablet' | 'desktop'
+
+/**
+ * Detect device type based on screen size and touch support.
+ */
+export function detectDeviceType(): DeviceType {
+  const width = window.innerWidth
+  const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+  
+  if (width < 768 || (hasTouch && width < 1024)) {
+    return 'mobile'
+  } else if (width < 1200 && hasTouch) {
+    return 'tablet'
+  }
+  return 'desktop'
+}
+
+/**
+ * Check if the device is in portrait mode.
+ */
+export function isPortrait(): boolean {
+  return window.innerHeight > window.innerWidth
+}
+
+/**
+ * Check if the device is mobile.
+ */
+export function isMobile(): boolean {
+  return detectDeviceType() === 'mobile'
+}
+
+/**
+ * Mobile-specific layout configuration.
+ */
+export interface MobileLayoutConfig {
+  /** Scale factor for cards */
+  cardScale: number
+  /** Camera distance multiplier */
+  cameraDistance: number
+  /** Font size multiplier */
+  fontScale: number
+  /** Touch area padding in pixels */
+  touchPadding: number
+  /** Whether to use simplified animations */
+  simplifiedAnimations: boolean
+}
+
+/**
+ * Get mobile layout configuration based on current viewport.
+ */
+export function getMobileConfig(): MobileLayoutConfig {
+  const deviceType = detectDeviceType()
+  const portrait = isPortrait()
+  
+  if (deviceType === 'mobile') {
+    return {
+      cardScale: portrait ? 0.7 : 0.85,
+      cameraDistance: portrait ? 1.4 : 1.2,
+      fontScale: portrait ? 0.8 : 0.9,
+      touchPadding: 16,
+      simplifiedAnimations: true
+    }
+  } else if (deviceType === 'tablet') {
+    return {
+      cardScale: portrait ? 0.85 : 0.95,
+      cameraDistance: portrait ? 1.2 : 1.1,
+      fontScale: portrait ? 0.9 : 0.95,
+      touchPadding: 12,
+      simplifiedAnimations: false
+    }
+  }
+  
+  // Desktop defaults
+  return {
+    cardScale: 1.0,
+    cameraDistance: 1.0,
+    fontScale: 1.0,
+    touchPadding: 8,
+    simplifiedAnimations: false
+  }
+}
+
+/**
+ * Get responsive layout positions based on viewport.
+ */
+export function getResponsiveLayout() {
+  const config = getMobileConfig()
+  const portrait = isPortrait()
+  
+  // Adjust horizontal spacing for portrait mode
+  const horizontalSpacing = portrait ? 2.0 : HORIZONTAL_SPACING
+  
+  return {
+    player1Deck: new THREE.Vector3(-horizontalSpacing * config.cardScale, 0, 0),
+    player2Deck: new THREE.Vector3(horizontalSpacing * config.cardScale, 0, 0),
+    player1Battle: new THREE.Vector3(-CARD_WIDTH * 0.6 * config.cardScale, BATTLE_Y_OFFSET, 0.1),
+    player2Battle: new THREE.Vector3(CARD_WIDTH * 0.6 * config.cardScale, BATTLE_Y_OFFSET, 0.1),
+    warPile: new THREE.Vector3(0, WAR_PILE_Y_OFFSET * config.cardScale, 0),
+    player1WarFaceDown: new THREE.Vector3(-CARD_WIDTH * 0.6 * config.cardScale, WAR_PILE_Y_OFFSET * config.cardScale, 0.05),
+    player2WarFaceDown: new THREE.Vector3(CARD_WIDTH * 0.6 * config.cardScale, WAR_PILE_Y_OFFSET * config.cardScale, 0.05)
+  }
+}
+
+/**
+ * Get responsive UI positions based on viewport.
+ */
+export function getResponsiveUIPositions() {
+  const portrait = isPortrait()
+  const mobile = isMobile()
+  
+  if (portrait && mobile) {
+    // Portrait mobile: stack player info vertically
+    return {
+      player1Info: { x: '50%', y: '5%' },
+      player2Info: { x: '50%', y: '95%' },
+      announcement: { x: '50%', y: '50%' },
+      prompt: { x: '50%', y: '75%' }
+    }
+  } else if (mobile) {
+    // Landscape mobile: tighter layout
+    return {
+      player1Info: { x: '10%', y: '10%' },
+      player2Info: { x: '90%', y: '10%' },
+      announcement: { x: '50%', y: '50%' },
+      prompt: { x: '50%', y: '90%' }
+    }
+  }
+  
+  // Desktop/tablet defaults
+  return UI_POSITIONS
+}
+
+/**
+ * Get camera configuration for current viewport.
+ */
+export function getResponsiveCameraConfig() {
+  const config = getMobileConfig()
+  const portrait = isPortrait()
+  
+  // Adjust camera for mobile
+  const defaultPos = CAMERA_POSITIONS.default.position.clone()
+  defaultPos.y *= config.cameraDistance
+  defaultPos.z *= config.cameraDistance
+  
+  // In portrait, pull camera back more
+  if (portrait) {
+    defaultPos.y *= 1.2
+    defaultPos.z *= 1.2
+  }
+  
+  return {
+    default: {
+      position: defaultPos,
+      lookAt: CAMERA_POSITIONS.default.lookAt.clone()
+    },
+    warCloseUp: {
+      position: CAMERA_POSITIONS.warCloseUp.position.clone().multiplyScalar(config.cameraDistance),
+      lookAt: CAMERA_POSITIONS.warCloseUp.lookAt.clone()
+    },
+    victory: {
+      position: CAMERA_POSITIONS.victory.position.clone().multiplyScalar(config.cameraDistance),
+      lookAt: CAMERA_POSITIONS.victory.lookAt.clone()
+    }
+  }
+}
+
+/**
+ * Apply mobile-friendly styles to an HTML element.
+ */
+export function applyMobileStyles(element: HTMLElement): void {
+  const config = getMobileConfig()
+  
+  // Prevent text selection on mobile
+  element.style.userSelect = 'none'
+  element.style.webkitUserSelect = 'none'
+  
+  // Prevent callout on iOS
+  ;(element.style as unknown as Record<string, string>).webkitTouchCallout = 'none'
+  
+  // Scale font sizes
+  const currentFontSize = parseFloat(getComputedStyle(element).fontSize)
+  element.style.fontSize = `${currentFontSize * config.fontScale}px`
+  
+  // Add touch-friendly padding for interactive elements
+  if (element.tagName === 'BUTTON' || element.getAttribute('role') === 'button') {
+    const paddingValue = `${config.touchPadding}px`
+    element.style.minHeight = '44px' // iOS minimum touch target
+    element.style.minWidth = '44px'
+    element.style.padding = paddingValue
+  }
+}
+
+/**
+ * Create a viewport resize handler that updates layout.
+ */
+export function createResponsiveHandler(
+  onResize: (config: MobileLayoutConfig) => void
+): () => void {
+  let resizeTimeout: number | null = null
+  
+  const handler = () => {
+    if (resizeTimeout !== null) {
+      clearTimeout(resizeTimeout)
+    }
+    
+    resizeTimeout = window.setTimeout(() => {
+      const config = getMobileConfig()
+      onResize(config)
+    }, 100) // Debounce
+  }
+  
+  window.addEventListener('resize', handler)
+  window.addEventListener('orientationchange', handler)
+  
+  // Return cleanup function
+  return () => {
+    window.removeEventListener('resize', handler)
+    window.removeEventListener('orientationchange', handler)
+    if (resizeTimeout !== null) {
+      clearTimeout(resizeTimeout)
+    }
+  }
+}
