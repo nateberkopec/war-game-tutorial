@@ -3,7 +3,7 @@
  * Integrates engine, UI, and persistence systems.
  */
 
-import { WarGameEngine, type PlayerId, type GameStats } from './engine'
+import { WarGameEngine, type PlayerId, type GameStats, QUICK_CONFIG } from './engine'
 import {
   GameScene,
   showTitleScreen,
@@ -75,8 +75,15 @@ async function startGame(player1Name: string, player2Name: string): Promise<void
     gameUI = null
   }
 
-  // Create engine
-  engine = new WarGameEngine()
+  // Create engine - check for quick mode via URL param (for testing)
+  const urlParams = new URLSearchParams(window.location.search)
+  const quickMode = urlParams.get('quick') === 'true'
+  
+  if (quickMode) {
+    console.log('Quick mode enabled - first to 30 cards wins!')
+  }
+  
+  engine = quickMode ? new WarGameEngine(QUICK_CONFIG) : new WarGameEngine()
   engine.setPlayers(
     { id: 'player1', name: player1Name },
     { id: 'player2', name: player2Name }
