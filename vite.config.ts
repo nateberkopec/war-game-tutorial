@@ -1,7 +1,9 @@
 import { defineConfig } from 'vite'
 import { resolve } from 'path'
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  // Set base path for GitHub Pages deployment
+  base: command === 'build' ? '/war-game-tutorial/' : '/',
   resolve: {
     alias: {
       '@engine': resolve(__dirname, 'src/engine'),
@@ -21,4 +23,4 @@ export default defineConfig({
     port: 3000,
     open: true,
   },
-})
+}))
