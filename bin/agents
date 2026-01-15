@@ -224,13 +224,13 @@ function launch_agents
     set -l first_path $first_parts[1]
     set -l first_name $first_parts[2]
     
-    # Build command with absolute path to prompt file
-    set -l first_cmd "opencode -m $model"
+    # Build command - cd explicitly into worktree then run opencode
+    set -l first_cmd "cd $first_path && opencode -m $model"
     if test "$dry_run" != "true"
-        set first_cmd "opencode -m $model --prompt 'Read $first_path/.prompts/AGENT_PROMPT.md for your instructions. Follow them precisely.'"
+        set first_cmd "cd $first_path && opencode -m $model --prompt 'Read $first_path/.prompts/AGENT_PROMPT.md for your instructions. Follow them precisely.'"
     end
     
-    tmux new-session -d -s "$session_name" -c "$first_path" "$first_cmd"
+    tmux new-session -d -s "$session_name" "$first_cmd"
     tmux select-pane -t "$session_name" -T "$first_name"
     
     # Add remaining worktrees as panes
@@ -240,13 +240,13 @@ function launch_agents
         set -l path $parts[1]
         set -l name $parts[2]
         
-        # Build command with absolute path to prompt file
-        set -l pane_cmd "opencode -m $model"
+        # Build command - cd explicitly into worktree then run opencode
+        set -l pane_cmd "cd $path && opencode -m $model"
         if test "$dry_run" != "true"
-            set pane_cmd "opencode -m $model --prompt 'Read $path/.prompts/AGENT_PROMPT.md for your instructions. Follow them precisely.'"
+            set pane_cmd "cd $path && opencode -m $model --prompt 'Read $path/.prompts/AGENT_PROMPT.md for your instructions. Follow them precisely.'"
         end
         
-        tmux split-window -t "$session_name" -c "$path" "$pane_cmd"
+        tmux split-window -t "$session_name" "$pane_cmd"
         tmux select-pane -t "$session_name" -T "$name"
         tmux select-layout -t "$session_name" tiled
     end
