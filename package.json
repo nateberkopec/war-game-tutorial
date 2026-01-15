@@ -13,6 +13,7 @@
     "test:watch": "vitest",
     "test:browser": "vitest run --config vitest.browser.config.ts",
     "test:coverage": "vitest run --coverage",
+    "test:qa": "node tests/qa/qa-test.mjs",
     "test:all": "npm run test && npm run test:browser"
   },
   "keywords": [
