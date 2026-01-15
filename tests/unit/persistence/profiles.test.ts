@@ -5,23 +5,11 @@ import {
   resetProfileManager,
 } from '../../../src/persistence/profiles'
 import type { GameSummary } from '../../../src/persistence/types'
+// Import GameStats from engine since that's what persistence uses on main branch
+import type { GameStats } from '../../../src/engine/types'
 
-// Define stats inline to avoid any type resolution issues between modules
-// This matches the GameStats type from src/persistence/types.ts
-interface TestGameStats {
-  totalRounds: number
-  warsCount: number
-  longestWarChain: number
-  largestWarPot: number
-  duration: number
-  averageRoundTime: number
-  player1RoundsWon: number
-  player2RoundsWon: number
-  biggestLead: { player: 'player1' | 'player2'; amount: number }
-}
-
-// Helper to create game stats for testing
-function createGameStats(overrides: Partial<TestGameStats> = {}): TestGameStats {
+// Helper to create game stats for testing - uses the engine's full GameStats type
+function createGameStats(overrides: Partial<GameStats> = {}): GameStats {
   return {
     totalRounds: 10,
     warsCount: 1,
@@ -32,6 +20,8 @@ function createGameStats(overrides: Partial<TestGameStats> = {}): TestGameStats 
     player1RoundsWon: 6,
     player2RoundsWon: 4,
     biggestLead: { player: 'player1', amount: 3 },
+    cardRankWins: {},
+    suitDistribution: {},
     ...overrides,
   }
 }
