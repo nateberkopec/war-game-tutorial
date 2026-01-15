@@ -4,7 +4,23 @@ import {
   getProfileManager,
   resetProfileManager,
 } from '../../../src/persistence/profiles'
-import type { GameSummary } from '../../../src/persistence/types'
+import type { GameSummary, GameStats as PersistenceGameStats } from '../../../src/persistence/types'
+
+// Helper to create game stats matching persistence module's GameStats type
+function createGameStats(overrides: Partial<PersistenceGameStats> = {}): PersistenceGameStats {
+  return {
+    totalRounds: 10,
+    warsCount: 1,
+    longestWarChain: 1,
+    largestWarPot: 4,
+    duration: 5000,
+    averageRoundTime: 500,
+    player1RoundsWon: 6,
+    player2RoundsWon: 4,
+    biggestLead: { player: 'player1', amount: 3 },
+    ...overrides,
+  }
+}
 
 describe('ProfileManager', () => {
   let manager: ProfileManager
@@ -91,17 +107,7 @@ describe('ProfileManager', () => {
         playedAt: Date.now(),
         opponent: 'Bob',
         won: true,
-        stats: {
-          totalRounds: 10,
-          warsCount: 1,
-          longestWarChain: 1,
-          largestWarPot: 4,
-          duration: 5000,
-          averageRoundTime: 500,
-          player1RoundsWon: 6,
-          player2RoundsWon: 4,
-          biggestLead: { player: 'player1', amount: 3 },
-        },
+        stats: createGameStats(),
         config: 'classic',
       }
       for (let i = 0; i < 5; i++) {
@@ -185,7 +191,7 @@ describe('ProfileManager', () => {
       playedAt: Date.now(),
       opponent: 'Bob',
       won: true,
-      stats: {
+      stats: createGameStats({
         totalRounds: 100,
         warsCount: 5,
         longestWarChain: 2,
@@ -195,7 +201,7 @@ describe('ProfileManager', () => {
         player1RoundsWon: 60,
         player2RoundsWon: 40,
         biggestLead: { player: 'player1', amount: 10 },
-      },
+      }),
       config: 'classic',
     }
 

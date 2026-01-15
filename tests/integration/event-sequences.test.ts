@@ -26,8 +26,7 @@ describe('Event Sequences', () => {
 
       const startEvent = events.find((e) => e.type === 'gameStarted')
       expect(startEvent).toBeDefined()
-      expect(startEvent!.type).toBe('gameStarted')
-      if (startEvent!.type === 'gameStarted') {
+      if (startEvent && startEvent.type === 'gameStarted') {
         expect(startEvent.players[0].name).toBe('Alice')
         expect(startEvent.players[1].name).toBe('Bob')
         expect(startEvent.config.seed).toBe('lifecycle-test')
@@ -56,7 +55,7 @@ describe('Event Sequences', () => {
 
       const endEvent = events.find((e) => e.type === 'gameEnded')
       expect(endEvent).toBeDefined()
-      if (endEvent!.type === 'gameEnded') {
+      if (endEvent && endEvent.type === 'gameEnded') {
         expect(endEvent.winner).toMatch(/player[12]/)
         expect(endEvent.stats).toBeDefined()
         expect(endEvent.stats.totalRounds).toBeGreaterThan(0)
@@ -84,7 +83,7 @@ describe('Event Sequences', () => {
       expect(roundEvents.length).toBeGreaterThanOrEqual(3)
       
       const firstRound = roundEvents[0]
-      if (firstRound.type === 'roundStarted') {
+      if (firstRound && firstRound.type === 'roundStarted') {
         expect(firstRound.roundNumber).toBeGreaterThanOrEqual(1)
       }
     })
@@ -104,7 +103,7 @@ describe('Event Sequences', () => {
 
       const drawnEvent = events.find((e) => e.type === 'cardsDrawn')
       expect(drawnEvent).toBeDefined()
-      if (drawnEvent!.type === 'cardsDrawn') {
+      if (drawnEvent && drawnEvent.type === 'cardsDrawn') {
         expect(drawnEvent.cards.player1).toBeDefined()
         expect(drawnEvent.cards.player2).toBeDefined()
         expect(drawnEvent.cards.player1.id).toBeDefined()
@@ -127,7 +126,7 @@ describe('Event Sequences', () => {
 
       const comparisonEvent = events.find((e) => e.type === 'comparison')
       expect(comparisonEvent).toBeDefined()
-      if (comparisonEvent!.type === 'comparison') {
+      if (comparisonEvent && comparisonEvent.type === 'comparison') {
         expect(['player1', 'player2', 'tie']).toContain(comparisonEvent.result)
         expect(comparisonEvent.cards).toHaveLength(2)
       }
@@ -152,7 +151,7 @@ describe('Event Sequences', () => {
 
       const roundWonEvent = events.find((e) => e.type === 'roundWon')
       expect(roundWonEvent).toBeDefined()
-      if (roundWonEvent!.type === 'roundWon') {
+      if (roundWonEvent && roundWonEvent.type === 'roundWon') {
         expect(['player1', 'player2']).toContain(roundWonEvent.winner)
         expect(roundWonEvent.cardsWon.length).toBeGreaterThanOrEqual(2)
       }
@@ -184,7 +183,7 @@ describe('Event Sequences', () => {
       }
 
       expect(warStartedEvent).toBeDefined()
-      if (warStartedEvent!.type === 'warStarted') {
+      if (warStartedEvent && warStartedEvent.type === 'warStarted') {
         expect(warStartedEvent.depth).toBeGreaterThanOrEqual(1)
       }
     })
@@ -249,7 +248,7 @@ describe('Event Sequences', () => {
       }
 
       expect(warResolved).toBeDefined()
-      if (warResolved!.type === 'warResolved') {
+      if (warResolved && warResolved.type === 'warResolved') {
         expect(['player1', 'player2']).toContain(warResolved.winner)
         expect(warResolved.totalCards).toBeGreaterThanOrEqual(6)
       }
