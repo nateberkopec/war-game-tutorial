@@ -215,13 +215,8 @@ function launch_agents
         tmux detach-client
     end
     
-    # Build the opencode command based on dry-run flag
     # Use Claude Opus 4.5 from OpenCode Zen (opencode provider, not anthropic)
     set -l model "opencode/claude-opus-4-5"
-    set -l opencode_cmd "opencode -m $model"
-    if test "$dry_run" != "true"
-        set opencode_cmd "opencode -m $model --prompt 'Read .prompts/AGENT_PROMPT.md for your instructions. Follow them precisely.'"
-    end
     
     # Create session with first worktree
     set -l first_entry $WORKTREES[1]
@@ -229,7 +224,13 @@ function launch_agents
     set -l first_path $first_parts[1]
     set -l first_name $first_parts[2]
     
-    tmux new-session -d -s "$session_name" -c "$first_path" "$opencode_cmd"
+    # Build command with absolute path to prompt file
+    set -l first_cmd "opencode -m $model"
+    if test "$dry_run" != "true"
+        set first_cmd "opencode -m $model --prompt 'Read $first_path/.prompts/AGENT_PROMPT.md for your instructions. Follow them precisely.'"
+    end
+    
+    tmux new-session -d -s "$session_name" -c "$first_path" "$first_cmd"
     tmux select-pane -t "$session_name" -T "$first_name"
     
     # Add remaining worktrees as panes
@@ -239,7 +240,13 @@ function launch_agents
         set -l path $parts[1]
         set -l name $parts[2]
         
-        tmux split-window -t "$session_name" -c "$path" "$opencode_cmd"
+        # Build command with absolute path to prompt file
+        set -l pane_cmd "opencode -m $model"
+        if test "$dry_run" != "true"
+            set pane_cmd "opencode -m $model --prompt 'Read $path/.prompts/AGENT_PROMPT.md for your instructions. Follow them precisely.'"
+        end
+        
+        tmux split-window -t "$session_name" -c "$path" "$pane_cmd"
         tmux select-pane -t "$session_name" -T "$name"
         tmux select-layout -t "$session_name" tiled
     end
