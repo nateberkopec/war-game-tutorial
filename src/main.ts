@@ -41,6 +41,9 @@ let lastRoundWinner: PlayerId | null = null
 // Track drawn cards for animation
 let pendingCardAnimations: Array<{ player: 'player1' | 'player2', rank: Rank, suit: Suit }> = []
 
+// Delay configuration
+const WIN_DISPLAY_DELAY = 5000 // 5 seconds to show "Player X wins!"
+
 // =============================================================================
 // Initialization
 // =============================================================================
@@ -199,7 +202,8 @@ function setupEngineEventHandlers(): void {
     if (event.type === 'roundWon' && gameUI && engine) {
       const state = engine.getState()
       const winnerName = state.players[event.winner].name
-      gameUI.textManager.showAnnouncement(`${winnerName} wins!`, 1000)
+      // Show for full WIN_DISPLAY_DELAY duration (user can click to skip)
+      gameUI.textManager.showAnnouncement(`${winnerName} wins!`, WIN_DISPLAY_DELAY)
       // Track winner for collect animation
       lastRoundWinner = event.winner
     }
@@ -319,6 +323,45 @@ function removeAutoDrawButton(): void {
   stopAutoDraw()
 }
 
+/**
+ * Wait for either a timeout or user input, whichever comes first.
+ * Uses AbortController to properly clean up the input listener.
+ * Returns true if user input occurred, false if timeout completed.
+ */
+async function waitWithInterrupt(timeoutMs: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const abortController = new AbortController()
+    let resolved = false
+    
+    const cleanup = () => {
+      if (!resolved) {
+        resolved = true
+        abortController.abort()
+      }
+    }
+    
+    const timeoutId = setTimeout(() => {
+      cleanup()
+      resolve(false)
+    }, timeoutMs)
+    
+    // Set up input listener with abort signal for cleanup
+    const handleInput = () => {
+      if (!resolved) {
+        clearTimeout(timeoutId)
+        cleanup()
+        resolve(true)
+      }
+    }
+    
+    // Listen for click, touch, or key events
+    const options = { once: true, signal: abortController.signal }
+    document.addEventListener('click', handleInput, options)
+    document.addEventListener('touchstart', handleInput, options)
+    document.addEventListener('keydown', handleInput, options)
+  })
+}
+
 async function gameLoop(): Promise<void> {
   if (!engine || !gameUI) return
 
@@ -371,8 +414,14 @@ async function gameLoop(): Promise<void> {
   // Update UI (deck counts)
   updateUI()
 
-  // Small delay to show the result
-  await new Promise((resolve) => setTimeout(resolve, 800))
+  // Wait for WIN_DISPLAY_DELAY or user click (whichever comes first)
+  // This gives users time to see the result but allows them to proceed immediately
+  // In auto-draw mode, use a shorter delay to keep the game moving
+  if (isAutoDrawing) {
+    await new Promise((resolve) => setTimeout(resolve, 800))
+  } else {
+    await waitWithInterrupt(WIN_DISPLAY_DELAY)
+  }
 
   // Clear battlefield for next round (unless in war)
   const newState = engine.getState()
