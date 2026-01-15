@@ -4,11 +4,25 @@ import {
   getProfileManager,
   resetProfileManager,
 } from '../../../src/persistence/profiles'
-import type { GameSummary, GameStats as PersistenceGameStats } from '../../../src/persistence/types'
+import type { GameSummary } from '../../../src/persistence/types'
 
-// Helper to create game stats matching persistence module's GameStats type
-function createGameStats(overrides: Partial<PersistenceGameStats> = {}): PersistenceGameStats {
-  const base: PersistenceGameStats = {
+// Define stats inline to avoid any type resolution issues between modules
+// This matches the GameStats type from src/persistence/types.ts
+interface TestGameStats {
+  totalRounds: number
+  warsCount: number
+  longestWarChain: number
+  largestWarPot: number
+  duration: number
+  averageRoundTime: number
+  player1RoundsWon: number
+  player2RoundsWon: number
+  biggestLead: { player: 'player1' | 'player2'; amount: number }
+}
+
+// Helper to create game stats for testing
+function createGameStats(overrides: Partial<TestGameStats> = {}): TestGameStats {
+  return {
     totalRounds: 10,
     warsCount: 1,
     longestWarChain: 1,
@@ -18,8 +32,8 @@ function createGameStats(overrides: Partial<PersistenceGameStats> = {}): Persist
     player1RoundsWon: 6,
     player2RoundsWon: 4,
     biggestLead: { player: 'player1', amount: 3 },
+    ...overrides,
   }
-  return { ...base, ...overrides }
 }
 
 describe('ProfileManager', () => {
