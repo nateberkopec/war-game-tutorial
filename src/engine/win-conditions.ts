@@ -8,6 +8,10 @@ export interface WinCheckResult {
   isOver: boolean
   winner: PlayerId | null
   reason: 'elimination' | 'firstTo' | 'rounds' | null
+  /** True if game ended in a draw (no winner) */
+  isDraw: boolean
+  /** Specific draw reason if isDraw is true */
+  drawReason?: 'simultaneousElimination' | 'roundsTie'
 }
 
 /**
@@ -41,22 +45,26 @@ export function checkWinCondition(state: GameState): WinCheckResult {
  */
 function checkElimination(p1Cards: number, p2Cards: number): WinCheckResult {
   if (p1Cards === 0 && p2Cards === 0) {
-    // Edge case: both players eliminated simultaneously (shouldn't happen normally)
-    // Could occur in nested wars - the player who ran out first loses
-    // If truly simultaneous, this is a draw - but we don't have draws,
-    // so the game should have ended earlier based on insufficient cards
-    return { isOver: true, winner: null, reason: 'elimination' }
+    // Edge case: both players eliminated simultaneously
+    // This is a draw - extremely rare but possible in nested wars
+    return {
+      isOver: true,
+      winner: null,
+      reason: 'elimination',
+      isDraw: true,
+      drawReason: 'simultaneousElimination',
+    }
   }
 
   if (p1Cards === 0) {
-    return { isOver: true, winner: 'player2', reason: 'elimination' }
+    return { isOver: true, winner: 'player2', reason: 'elimination', isDraw: false }
   }
 
   if (p2Cards === 0) {
-    return { isOver: true, winner: 'player1', reason: 'elimination' }
+    return { isOver: true, winner: 'player1', reason: 'elimination', isDraw: false }
   }
 
-  return { isOver: false, winner: null, reason: null }
+  return { isOver: false, winner: null, reason: null, isDraw: false }
 }
 
 /**
@@ -68,14 +76,14 @@ function checkFirstTo(
   targetCount: number
 ): WinCheckResult {
   if (p1Cards >= targetCount) {
-    return { isOver: true, winner: 'player1', reason: 'firstTo' }
+    return { isOver: true, winner: 'player1', reason: 'firstTo', isDraw: false }
   }
 
   if (p2Cards >= targetCount) {
-    return { isOver: true, winner: 'player2', reason: 'firstTo' }
+    return { isOver: true, winner: 'player2', reason: 'firstTo', isDraw: false }
   }
 
-  return { isOver: false, winner: null, reason: null }
+  return { isOver: false, winner: null, reason: null, isDraw: false }
 }
 
 /**
@@ -88,22 +96,26 @@ function checkRounds(
   maxRounds: number
 ): WinCheckResult {
   if (currentRound < maxRounds) {
-    return { isOver: false, winner: null, reason: null }
+    return { isOver: false, winner: null, reason: null, isDraw: false }
   }
 
   // Game is over - determine winner by card count
   if (p1Cards > p2Cards) {
-    return { isOver: true, winner: 'player1', reason: 'rounds' }
+    return { isOver: true, winner: 'player1', reason: 'rounds', isDraw: false }
   }
 
   if (p2Cards > p1Cards) {
-    return { isOver: true, winner: 'player2', reason: 'rounds' }
+    return { isOver: true, winner: 'player2', reason: 'rounds', isDraw: false }
   }
 
-  // Tie on cards at end of rounds - this is a rare edge case
-  // The spec doesn't define this, so we'll declare the game over with no winner
-  // In practice, the UI layer should handle this as a draw
-  return { isOver: true, winner: null, reason: 'rounds' }
+  // Tie on cards at end of rounds - game is a draw
+  return {
+    isOver: true,
+    winner: null,
+    reason: 'rounds',
+    isDraw: true,
+    drawReason: 'roundsTie',
+  }
 }
 
 /**
