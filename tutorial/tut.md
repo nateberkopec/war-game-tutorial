@@ -119,3 +119,25 @@ Ultrathink here causes Claude to use more tokens.
 Ok 15 minutes left fuck, time to motor. Let's launch this fucker and go.
 
 At this point I'm gonna close that main agent window we've been using (you can pick up and resume this later).
+
+## OpenCode Session Links
+
+Here are the OpenCode sessions used to build this game. You can view the full conversation history, tool calls, and file changes for each session.
+
+### Phase 1: Spec & Planning (Main Repo)
+
+- **Initial Spec Session**: [https://opncd.ai/share/GoTBTAgl](https://opncd.ai/share/GoTBTAgl) - War card game development discussion and SPEC.md plan
+
+### Phase 2: Parallel Implementation (Worktrees)
+
+- **W1 - Game Engine**: [https://opncd.ai/share/bJNSll0N](https://opncd.ai/share/bJNSll0N) - Core game engine implementation (deck, RNG, events, war resolution, win conditions)
+- **W2 - Persistence**: `ses_43e96d6a2ffeK7tmJXaivqQiRk` - LocalStorage adapter, Profile Manager, Stats, and Settings
+- **W3 - Rendering**: `ses_43e897e85ffelmFUwM5fv1i5ih` - Three.js scene, renderer, and card textures
+- **W4 - Infrastructure**: `ses_43e96d5b5ffeco0v6bpDN5j0Ov` - Vite, TypeScript, Vitest, CI workflow, itch.io packaging
+
+### Phase 3: Feature Additions
+
+- **Feature Roadmap**: `ses_43ce741bbffeKlLCavxP4XX8kK` - Debug page, seed/rule preset, replay, stats on start screen
+- **PR Automation**: `ses_43ce6c7e6ffe38sPsCjOwjr4C2` - Auto-draw, delayed draw feedback, card draw animations
+
+Note: Sessions without share links can be shared by running `/share` in OpenCode while in that session, or by resuming the session with `opencode -s <session_id>` and then running `/share`.
