@@ -6,6 +6,8 @@ We use **git worktrees** to allow 4 agents to work simultaneously on separate br
 
 ### Setup (Run Once)
 
+> **ALREADY COMPLETED** - Worktrees created on 2026-01-15. Skip to "OpenCode Windows" section.
+
 ```bash
 # From the main repo directory
 cd /Users/nateberkopec/src/tries/2026-01-15-vibe-game
