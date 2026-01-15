@@ -14,6 +14,10 @@ export default defineConfig(({ command }) => ({
   build: {
     // Single bundle for itch.io distribution
     rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+        debug: resolve(__dirname, 'debug.html'),
+      },
       output: {
         manualChunks: undefined,
       },
