@@ -254,6 +254,11 @@ export class WarGameEngine implements IWarGameEngine {
     const card2 = drawCard(this.state.players.player2.deck)
 
     if (!card1 || !card2) {
+      // Handle edge case: both players have no cards simultaneously
+      if (!card1 && !card2) {
+        this.endGameDraw('simultaneousElimination')
+        return
+      }
       // One player has no cards - check win condition
       this.checkAndEndGame()
       return
@@ -387,6 +392,24 @@ export class WarGameEngine implements IWarGameEngine {
     const card2 = drawCard(this.state.players.player2.deck)
 
     if (!card1 || !card2) {
+      // Handle both players running out simultaneously
+      if (!card1 && !card2) {
+        this.emit({
+          type: 'insufficientCards',
+          player: 'player1',
+          needed: 1,
+          had: 0,
+        })
+        this.emit({
+          type: 'insufficientCards',
+          player: 'player2',
+          needed: 1,
+          had: 0,
+        })
+        this.endGameDraw('simultaneousElimination')
+        return
+      }
+
       // One player ran out during war
       this.emit({
         type: 'insufficientCards',
@@ -608,8 +631,12 @@ export class WarGameEngine implements IWarGameEngine {
   private checkAndEndGame(): void {
     const result = checkWinCondition(this.state)
 
-    if (result.isOver && result.winner) {
-      this.endGame(result.winner)
+    if (result.isOver) {
+      if (result.isDraw) {
+        this.endGameDraw(result.drawReason!)
+      } else if (result.winner) {
+        this.endGame(result.winner)
+      }
     }
   }
 
@@ -620,6 +647,17 @@ export class WarGameEngine implements IWarGameEngine {
     this.emit({
       type: 'gameEnded',
       winner,
+      stats: { ...this.stats },
+    })
+  }
+
+  private endGameDraw(reason: 'simultaneousElimination' | 'roundsTie'): void {
+    this.state.phase = 'finished'
+    this.stats.duration = Date.now() - this.startTime
+
+    this.emit({
+      type: 'gameDraw',
+      reason,
       stats: { ...this.stats },
     })
   }
