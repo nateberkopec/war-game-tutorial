@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { SceneManager } from './scene'
 import { CardMesh, createDeckStack, Rank, Suit } from './card'
 import { generateCardFaceTexture, generateCardBackTexture, preloadAllTextures } from './card-textures'
-import { LAYOUT, getCardTableRotation, getDeckStackRotation } from './layout'
+import { LAYOUT, getCardTableRotation } from './layout'
 
 /**
  * GameScene manages the visual representation of the War card game.

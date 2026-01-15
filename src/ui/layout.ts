@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { CARD_WIDTH, CARD_HEIGHT } from './card'
+import { CARD_WIDTH } from './card'
 
 /**
  * Layout positions for the game table.
@@ -102,7 +102,7 @@ export function getDeckStackRotation(): THREE.Euler {
 export function getStackedCardPosition(
   basePosition: THREE.Vector3,
   index: number,
-  total: number
+  _total: number
 ): THREE.Vector3 {
   const stackHeight = 0.02 // Height offset per card
   const randomOffset = 0.02 // Random XY offset for realistic look
