@@ -54,3 +54,31 @@ jobs:
       - name: Run browser tests
         run: npm run test:browser
         continue-on-error: true  # Browser tests may not exist yet
+
+  qa-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Build
+        run: npm run build
+
+      - name: Run QA tests
+        run: |
+          npm run preview &
+          sleep 3
+          npm run test:qa
