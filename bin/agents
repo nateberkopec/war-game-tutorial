@@ -1,0 +1,280 @@
+#!/usr/bin/env fish
+
+# bin/agents - Launch 4 opencode agents in tmux for War game development
+
+set -l SCRIPT_DIR (dirname (status filename))
+set -l REPO_ROOT (cd "$SCRIPT_DIR/.." && pwd)
+set -l WORKTREE_BASE (dirname "$REPO_ROOT")
+
+# Worktree paths, names, and prompt files
+set -l WORKTREES \
+    "$WORKTREE_BASE/war-game-w1:W1-Engine:agent1" \
+    "$WORKTREE_BASE/war-game-w2:W2-Persistence:agent2" \
+    "$WORKTREE_BASE/war-game-w3:W3-Rendering:agent3" \
+    "$WORKTREE_BASE/war-game-w4:W4-Infrastructure:agent4"
+
+function usage
+    gum style --foreground 12 --bold "bin/agents - Launch parallel AI coding agents for War game"
+    echo ""
+    gum style --foreground 7 "Usage:"
+    echo "  bin/agents          Launch all 4 agents in tmux"
+    echo "  bin/agents list     Show worktree status"
+    echo "  bin/agents nuke     Remove tmux session"
+    echo ""
+    gum style --foreground 7 "Workstreams:"
+    echo "  W1-Engine         src/engine/*"
+    echo "  W2-Persistence    src/persistence/*"
+    echo "  W3-Rendering      src/ui/*"
+    echo "  W4-Infrastructure tests/*, configs"
+end
+
+function list_worktrees
+    gum style --foreground 12 --bold "War Game Agent Worktrees"
+    echo ""
+    
+    for entry in $WORKTREES
+        set -l parts (string split ":" $entry)
+        set -l path $parts[1]
+        set -l name $parts[2]
+        
+        if test -d "$path"
+            set -l branch (git -C "$path" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "detached")
+            set -l commit (git -C "$path" log -1 --format='%h %s' 2>/dev/null | head -c 60)
+            set -l status (git -C "$path" status --porcelain 2>/dev/null | wc -l | string trim)
+            
+            gum style --foreground 10 --bold "$name"
+            echo "  Path:   $path"
+            echo "  Branch: $branch"
+            echo "  Commit: $commit"
+            echo "  Uncommitted changes: $status file(s)"
+            echo ""
+        else
+            gum style --foreground 1 "$name - NOT FOUND"
+            echo "  Expected: $path"
+            echo ""
+        end
+    end
+end
+
+function nuke_session
+    set -l session_name "war-agents"
+    if tmux has-session -t "$session_name" 2>/dev/null
+        gum style --foreground 3 "Killing tmux session: $session_name"
+        tmux kill-session -t "$session_name"
+        gum style --foreground 10 "Done."
+    else
+        gum style --foreground 3 "No session named '$session_name' found."
+    end
+end
+
+function create_prompt_files
+    # Agent 1 - Engine
+    echo 'You are Agent 1 (W1: Core Engine).
+
+Read SPEC.md and PLAN.md to understand the project and your tasks.
+
+YOUR WORKSTREAM: W1 - Core Engine
+YOUR BRANCH: w1-engine
+YOUR DIRECTORY: src/engine/*
+
+You own all game logic: types, deck, RNG, events, engine, war resolution, win conditions.
+
+START WITH:
+1. Read SPEC.md (full game specification)
+2. Read PLAN.md (find "W1: Core Engine" sections and "Agent 1" instructions)
+3. Begin Phase 1, Task 1.1: Create src/engine/types.ts
+
+IMPORTANT: Task 1.1 (types.ts) unblocks Agents 2 and 3. Prioritize this first, commit and push when done.
+
+Commit messages should start with [W1], e.g.: git commit -m "[W1] Define core game types"
+
+When you complete Phase 1, signal: "Phase 1 complete. Types stable. Engine instantiates and emits events."
+Then STOP and wait for human to confirm before starting Phase 2.' > "$REPO_ROOT/.prompts/agent1.md"
+
+    # Agent 2 - Persistence
+    echo 'You are Agent 2 (W2: Persistence).
+
+Read SPEC.md and PLAN.md to understand the project and your tasks.
+
+YOUR WORKSTREAM: W2 - Persistence
+YOUR BRANCH: w2-persistence
+YOUR DIRECTORY: src/persistence/*
+
+You own all storage: LocalStorage abstraction, profiles, stats, settings, saves, replays.
+
+START WITH:
+1. Read SPEC.md (full game specification)
+2. Read PLAN.md (find "W2: Persistence" sections and "Agent 2" instructions)
+3. Begin Phase 1, Task 2.2: Create src/persistence/storage.ts (storage abstraction - no dependencies)
+
+WAIT FOR: Agent 1 to complete types.ts before Task 2.1. You can start with 2.2 immediately.
+To get types when ready: git fetch origin w1-engine && git merge origin/w1-engine --no-edit
+
+Commit messages should start with [W2], e.g.: git commit -m "[W2] Implement LocalStorage adapter"
+
+When you complete Phase 1, signal: "Phase 1 complete. Profiles can be created/loaded/saved."
+Then STOP and wait for human to confirm before starting Phase 2.' > "$REPO_ROOT/.prompts/agent2.md"
+
+    # Agent 3 - Rendering
+    echo 'You are Agent 3 (W3: Rendering).
+
+Read SPEC.md and PLAN.md to understand the project and your tasks.
+
+YOUR WORKSTREAM: W3 - Rendering
+YOUR BRANCH: w3-rendering
+YOUR DIRECTORY: src/ui/*
+
+You own all visuals: Three.js scene, cards, textures, layout, animations, screens, effects.
+
+START WITH:
+1. Read SPEC.md (full game specification)
+2. Read PLAN.md (find "W3: Rendering" sections and "Agent 3" instructions)
+3. Begin Phase 1, Task 3.1: Create src/ui/scene.ts (Three.js setup - no dependencies)
+
+Phase 1 is fully independent - no waiting required. You can define local placeholder types if needed.
+In Phase 2, you will need to subscribe to engine events from Agent 1.
+
+Commit messages should start with [W3], e.g.: git commit -m "[W3] Setup Three.js scene and renderer"
+
+When you complete Phase 1, signal: "Phase 1 complete. Static game table renders with card decks."
+Then STOP and wait for human to confirm before starting Phase 2.' > "$REPO_ROOT/.prompts/agent3.md"
+
+    # Agent 4 - Infrastructure
+    echo 'You are Agent 4 (W4: Infrastructure).
+
+Read SPEC.md and PLAN.md to understand the project and your tasks.
+
+YOUR WORKSTREAM: W4 - Infrastructure
+YOUR BRANCH: w4-infrastructure
+YOUR DIRECTORIES: tests/*, *.config.*, .github/*, package.json, tsconfig.json, index.html
+
+You own project setup: build config, test config, CI, and later writing tests for other agents code.
+
+START WITH:
+1. Read SPEC.md (full game specification)  
+2. Read PLAN.md (find "W4: Infrastructure" sections and "Agent 4" instructions)
+3. Begin Phase 1, Task 4.1: Initialize project with npm init and package.json
+
+CRITICAL PATH: Other agents need your build setup to run their code. Prioritize tasks 4.1-4.8.
+Create the directory structure (src/engine, src/persistence, src/ui, tests/*) so imports work.
+
+Commit messages should start with [W4], e.g.: git commit -m "[W4] Configure Vite and TypeScript"
+
+When you complete Phase 1, signal: "Phase 1 complete. Run npm install && npm run dev to start. npm test runs."
+Then STOP and wait for human to confirm before starting Phase 2.' > "$REPO_ROOT/.prompts/agent4.md"
+end
+
+function launch_agents
+    set -l session_name "war-agents"
+    
+    # Check if session already exists
+    if tmux has-session -t "$session_name" 2>/dev/null
+        gum style --foreground 3 "Session '$session_name' already exists."
+        if gum confirm "Attach to existing session?"
+            tmux attach -t "$session_name"
+            return 0
+        else if gum confirm "Kill and recreate?"
+            tmux kill-session -t "$session_name"
+        else
+            return 0
+        end
+    end
+    
+    # Verify all worktrees exist
+    for entry in $WORKTREES
+        set -l parts (string split ":" $entry)
+        set -l path $parts[1]
+        set -l name $parts[2]
+        
+        if not test -d "$path"
+            gum style --foreground 1 "Worktree not found: $name"
+            gum style --foreground 1 "Expected: $path"
+            gum style --foreground 3 "Run the setup commands in PLAN.md first."
+            return 1
+        end
+    end
+    
+    # Create prompt files
+    mkdir -p "$REPO_ROOT/.prompts"
+    create_prompt_files
+    
+    # Copy prompts to each worktree
+    for entry in $WORKTREES
+        set -l parts (string split ":" $entry)
+        set -l path $parts[1]
+        set -l prompt_name $parts[3]
+        
+        mkdir -p "$path/.prompts"
+        cp "$REPO_ROOT/.prompts/$prompt_name.md" "$path/.prompts/AGENT_PROMPT.md"
+    end
+    
+    # Detach if already in tmux
+    if set -q TMUX
+        tmux detach-client
+    end
+    
+    # Create session with first worktree
+    set -l first_entry $WORKTREES[1]
+    set -l first_parts (string split ":" $first_entry)
+    set -l first_path $first_parts[1]
+    set -l first_name $first_parts[2]
+    
+    # Use a here-string approach: opencode reads prompt from file via --prompt flag
+    # The prompt is a single line instruction to read the full prompt file
+    tmux new-session -d -s "$session_name" -c "$first_path" \
+        "opencode --prompt 'Read .prompts/AGENT_PROMPT.md for your instructions. Follow them precisely.'"
+    tmux select-pane -t "$session_name" -T "$first_name"
+    
+    # Add remaining worktrees as panes
+    for i in (seq 2 (count $WORKTREES))
+        set -l entry $WORKTREES[$i]
+        set -l parts (string split ":" $entry)
+        set -l path $parts[1]
+        set -l name $parts[2]
+        
+        tmux split-window -t "$session_name" -c "$path" \
+            "opencode --prompt 'Read .prompts/AGENT_PROMPT.md for your instructions. Follow them precisely.'"
+        tmux select-pane -t "$session_name" -T "$name"
+        tmux select-layout -t "$session_name" tiled
+    end
+    
+    # Configure tmux session
+    tmux set-option -t "$session_name" mouse on
+    tmux set-option -t "$session_name" allow-rename off
+    tmux set-option -wg -t "$session_name" allow-set-title off
+    tmux set-option -t "$session_name" pane-border-status top
+    tmux set-option -t "$session_name" pane-border-format " #{pane_title} "
+    tmux bind-key -T prefix Q kill-session
+    
+    gum style --foreground 10 "Launching 4 agents in tmux session: $session_name"
+    gum style --foreground 7 "  Each agent receives its prompt from .prompts/AGENT_PROMPT.md"
+    gum style --foreground 7 "  Prefix+Q to kill all agents"
+    gum style --foreground 7 "  Prefix+arrow to navigate panes"
+    gum style --foreground 7 "  Prefix+z to zoom a pane"
+    echo ""
+    
+    tmux attach -t "$session_name"
+end
+
+# Require dependencies
+for cmd in git tmux opencode gum
+    if not command -q $cmd
+        gum style --foreground 1 "Missing required command: $cmd"
+        exit 1
+    end
+end
+
+# Parse arguments
+switch "$argv[1]"
+    case "" 
+        launch_agents
+    case "list"
+        list_worktrees
+    case "nuke"
+        nuke_session
+    case "--help" "-h" "help"
+        usage
+    case "*"
+        usage
+        exit 1
+end

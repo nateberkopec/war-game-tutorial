@@ -38,8 +38,32 @@ This creates:
 
 ### OpenCode Windows
 
-Open 4 terminal windows/tabs, one for each agent:
+Use the `bin/agents` script to launch all 4 agents in a tmux session:
 
+```bash
+# From the main repo
+cd /Users/nateberkopec/src/tries/2026-01-15-vibe-game
+bin/agents
+```
+
+This opens a tmux session with 4 panes, each running opencode in its worktree:
+- **W1-Engine** - `war-game-w1/`
+- **W2-Persistence** - `war-game-w2/`
+- **W3-Rendering** - `war-game-w3/`
+- **W4-Infrastructure** - `war-game-w4/`
+
+**Tmux controls:**
+- `Prefix + arrow keys` - Navigate between panes
+- `Prefix + Q` - Kill all agents (custom binding)
+- `Prefix + z` - Zoom current pane (toggle fullscreen)
+
+**Other commands:**
+```bash
+bin/agents list   # Show worktree status
+bin/agents nuke   # Kill the tmux session
+```
+
+**Manual alternative** (if you prefer separate terminals):
 ```bash
 # Terminal 1 - Agent 1 (Engine)
 cd /Users/nateberkopec/src/tries/war-game-w1
