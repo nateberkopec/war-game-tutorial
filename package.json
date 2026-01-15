@@ -28,6 +28,7 @@
   "devDependencies": {
     "@types/three": "^0.182.0",
     "@vitest/browser": "^4.0.17",
+    "@vitest/browser-playwright": "^4.0.17",
     "@vitest/coverage-v8": "^4.0.17",
     "jsdom": "^27.4.0",
     "playwright": "^1.57.0",
