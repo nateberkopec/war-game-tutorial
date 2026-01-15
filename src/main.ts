@@ -100,19 +100,17 @@ function handleGameEvent(event: GameEvent) {
       break
       
     case 'roundWon':
-      // Update deck counts after a short delay
-      setTimeout(() => {
-        if (gameScene && engine) {
-          const state = engine.getState()
-          gameScene.clearBattlefield()
-          gameScene.updateDecks(
-            state.players.player1.deck.length,
-            state.players.player2.deck.length
-          )
-          updateUI()
-          promptForClick('Click anywhere to draw cards')
-        }
-      }, 500)
+      // Update deck counts immediately
+      if (gameScene && engine) {
+        const state = engine.getState()
+        gameScene.clearBattlefield()
+        gameScene.updateDecks(
+          state.players.player1.deck.length,
+          state.players.player2.deck.length
+        )
+        updateUI()
+        promptForClick('Click anywhere to draw cards')
+      }
       break
       
     case 'warStarted':
@@ -137,11 +135,9 @@ function handleGameEvent(event: GameEvent) {
       const resolveWinnerName = engine?.getState().players[resolveWinner].name || resolveWinner
       promptForClick(`${resolveWinnerName} wins the war! Click to continue...`)
       
-      setTimeout(() => {
-        if (gameScene) {
-          gameScene.clearWarPile()
-        }
-      }, 500)
+      if (gameScene) {
+        gameScene.clearWarPile()
+      }
       break
       
     case 'gameEnded':
@@ -197,12 +193,13 @@ function handleClick(event: MouseEvent) {
     return
   }
   
-  if (currentPhase === 'playing' && isWaitingForClick && engine) {
-    isWaitingForClick = false
-    hidePrompt()
-    
+  if (currentPhase === 'playing' && engine) {
     const state = engine.getState()
-    if (state.phase === 'playing' || state.phase === 'war') {
+    console.log('Click - phase:', state.phase, 'isWaiting:', isWaitingForClick, 'p1Cards:', state.players.player1.deck.length, 'p2Cards:', state.players.player2.deck.length)
+    
+    if (isWaitingForClick && (state.phase === 'playing' || state.phase === 'war')) {
+      isWaitingForClick = false
+      hidePrompt()
       engine.draw()
     }
   }
