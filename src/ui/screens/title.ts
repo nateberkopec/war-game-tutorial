@@ -4,7 +4,8 @@
 
 import { createButton, createTextInput } from '../text'
 import { getReplayManager, type ReplayMetadata } from '../../persistence/replays'
-import type { Replay } from '../../engine/types'
+import type { Replay, RulePreset } from '../../engine/types'
+import { getPresetNames, describePreset } from '../../engine/presets'
 
 /**
  * Player info collected from the title screen.
@@ -12,6 +13,10 @@ import type { Replay } from '../../engine/types'
 export interface TitleScreenResult {
   player1Name: string
   player2Name: string
+  /** Optional seed for reproducible games */
+  seed?: string
+  /** Selected rule preset */
+  preset: RulePreset
 }
 
 /**
@@ -22,6 +27,10 @@ export interface TitleScreenConfig {
   defaultPlayer1Name?: string
   /** Default name for player 2 */
   defaultPlayer2Name?: string
+  /** Default seed value */
+  defaultSeed?: string
+  /** Default preset */
+  defaultPreset?: RulePreset
   /** Callback when game starts */
   onStart?: (result: TitleScreenResult) => void
   /** Callback when user wants to watch a replay */
@@ -37,11 +46,14 @@ export class TitleScreen {
   private onWatchReplayCallback?: (replay: Replay) => void
   private player1Input: HTMLInputElement | null = null
   private player2Input: HTMLInputElement | null = null
+  private seedInput: HTMLInputElement | null = null
+  private selectedPreset: RulePreset = 'classic'
   private replayModal: HTMLElement | null = null
 
   constructor(config: TitleScreenConfig = {}) {
     this.onStartCallback = config.onStart
     this.onWatchReplayCallback = config.onWatchReplay
+    this.selectedPreset = config.defaultPreset || 'classic'
     this.container = this.createContainer()
     this.render(config)
   }
@@ -127,6 +139,14 @@ export class TitleScreen {
     inputsContainer.appendChild(player1Row.container)
     inputsContainer.appendChild(player2Row.container)
 
+    // Preset selection
+    const presetSection = this.createPresetSection()
+    inputsContainer.appendChild(presetSection)
+
+    // Seed input row (optional, in a collapsible section)
+    const seedSection = this.createSeedSection(config.defaultSeed)
+    inputsContainer.appendChild(seedSection)
+
     // Buttons container
     const buttonsContainer = document.createElement('div')
     buttonsContainer.style.cssText = `
@@ -160,6 +180,192 @@ export class TitleScreen {
     this.container.appendChild(subtitle)
     this.container.appendChild(inputsContainer)
     this.container.appendChild(buttonsContainer)
+  }
+
+  private createPresetSection(): HTMLElement {
+    const container = document.createElement('div')
+    container.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      margin-top: 20px;
+    `
+
+    const label = document.createElement('label')
+    label.textContent = 'Game Mode:'
+    label.style.cssText = `
+      font-size: 18px;
+      color: #a8dadc;
+    `
+
+    const buttonsContainer = document.createElement('div')
+    buttonsContainer.style.cssText = `
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      max-width: 500px;
+    `
+
+    const presets = getPresetNames().filter(p => p !== 'custom')
+    const presetButtons: HTMLButtonElement[] = []
+
+    for (const preset of presets) {
+      const btn = document.createElement('button')
+      btn.textContent = preset.charAt(0).toUpperCase() + preset.slice(1)
+      btn.title = describePreset(preset)
+      btn.style.cssText = `
+        background: ${preset === this.selectedPreset ? '#457b9d' : 'rgba(69, 123, 157, 0.3)'};
+        border: 2px solid ${preset === this.selectedPreset ? '#a8dadc' : '#457b9d'};
+        color: white;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s ease;
+        pointer-events: auto;
+      `
+
+      btn.addEventListener('mouseenter', () => {
+        if (preset !== this.selectedPreset) {
+          btn.style.background = 'rgba(69, 123, 157, 0.5)'
+        }
+      })
+      btn.addEventListener('mouseleave', () => {
+        if (preset !== this.selectedPreset) {
+          btn.style.background = 'rgba(69, 123, 157, 0.3)'
+        }
+      })
+
+      btn.addEventListener('click', () => {
+        this.selectedPreset = preset
+        // Update button styles
+        presetButtons.forEach(b => {
+          const isSelected = b === btn
+          b.style.background = isSelected ? '#457b9d' : 'rgba(69, 123, 157, 0.3)'
+          b.style.borderColor = isSelected ? '#a8dadc' : '#457b9d'
+        })
+        // Update description
+        descriptionEl.textContent = describePreset(preset)
+      })
+
+      presetButtons.push(btn)
+      buttonsContainer.appendChild(btn)
+    }
+
+    const descriptionEl = document.createElement('p')
+    descriptionEl.textContent = describePreset(this.selectedPreset)
+    descriptionEl.style.cssText = `
+      font-size: 14px;
+      color: #888;
+      text-align: center;
+      margin: 0;
+      min-height: 20px;
+    `
+
+    container.appendChild(label)
+    container.appendChild(buttonsContainer)
+    container.appendChild(descriptionEl)
+
+    return container
+  }
+
+  private createSeedSection(defaultSeed?: string): HTMLElement {
+    const container = document.createElement('div')
+    container.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+    `
+
+    // Toggle button to show/hide seed input
+    const toggleBtn = document.createElement('button')
+    toggleBtn.textContent = 'Advanced Options'
+    toggleBtn.style.cssText = `
+      background: transparent;
+      border: 1px solid #457b9d;
+      color: #a8dadc;
+      padding: 6px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s ease;
+    `
+    toggleBtn.addEventListener('mouseenter', () => {
+      toggleBtn.style.background = 'rgba(69, 123, 157, 0.2)'
+    })
+    toggleBtn.addEventListener('mouseleave', () => {
+      toggleBtn.style.background = 'transparent'
+    })
+
+    // Seed input row (hidden by default)
+    const seedRow = document.createElement('div')
+    seedRow.style.cssText = `
+      display: none;
+      align-items: center;
+      gap: 16px;
+      margin-top: 8px;
+    `
+
+    const labelElement = document.createElement('label')
+    labelElement.textContent = 'Seed:'
+    labelElement.style.cssText = `
+      font-size: 16px;
+      color: #a8dadc;
+      width: 100px;
+      text-align: right;
+    `
+
+    this.seedInput = createTextInput('Seed')
+    this.seedInput.value = defaultSeed || ''
+    this.seedInput.placeholder = 'Leave empty for random'
+    this.seedInput.style.pointerEvents = 'auto'
+    this.seedInput.style.width = '200px'
+    this.seedInput.style.fontSize = '14px'
+
+    // Handle Enter key
+    this.seedInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        this.handleStart()
+      }
+    })
+
+    // Random seed button
+    const randomBtn = document.createElement('button')
+    randomBtn.textContent = 'Random'
+    randomBtn.style.cssText = `
+      background: #457b9d;
+      border: none;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    `
+    randomBtn.addEventListener('click', () => {
+      if (this.seedInput) {
+        this.seedInput.value = Math.random().toString(36).substring(2, 10)
+      }
+    })
+
+    seedRow.appendChild(labelElement)
+    seedRow.appendChild(this.seedInput)
+    seedRow.appendChild(randomBtn)
+
+    // Toggle visibility
+    toggleBtn.addEventListener('click', () => {
+      const isHidden = seedRow.style.display === 'none'
+      seedRow.style.display = isHidden ? 'flex' : 'none'
+      toggleBtn.textContent = isHidden ? 'Hide Options' : 'Advanced Options'
+    })
+
+    container.appendChild(toggleBtn)
+    container.appendChild(seedRow)
+
+    return container
   }
 
   private createPlayerInputRow(
@@ -202,10 +408,13 @@ export class TitleScreen {
   private handleStart(): void {
     const player1Name = this.player1Input?.value.trim() || 'Player 1'
     const player2Name = this.player2Input?.value.trim() || 'Player 2'
+    const seed = this.seedInput?.value.trim() || undefined
 
     this.onStartCallback?.({
       player1Name,
-      player2Name
+      player2Name,
+      seed,
+      preset: this.selectedPreset,
     })
   }
 
