@@ -2,12 +2,12 @@
 
 # bin/agents - Launch 4 opencode agents in tmux for War game development
 
-set -l SCRIPT_DIR (dirname (status filename))
-set -l REPO_ROOT (cd "$SCRIPT_DIR/.." && pwd)
-set -l WORKTREE_BASE (dirname "$REPO_ROOT")
+set -g SCRIPT_DIR (dirname (status filename))
+set -g REPO_ROOT (cd "$SCRIPT_DIR/.." && pwd)
+set -g WORKTREE_BASE (dirname "$REPO_ROOT")
 
 # Worktree paths, names, and prompt files
-set -l WORKTREES \
+set -g WORKTREES \
     "$WORKTREE_BASE/war-game-w1:W1-Engine:agent1" \
     "$WORKTREE_BASE/war-game-w2:W2-Persistence:agent2" \
     "$WORKTREE_BASE/war-game-w3:W3-Rendering:agent3" \
