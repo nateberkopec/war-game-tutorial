@@ -54,10 +54,17 @@ npm install
 npm run dev
 
 # Run tests
-npm test
+npm test              # Unit & integration tests (132 tests)
+npm run test:browser  # Browser visual tests
+npm run test:e2e      # Playwright E2E tests (14 tests)
+npm run test:all      # All tests
 
 # Build for production
-npm run build
+npm run build           # Standard build for local preview
+npm run build:itchio    # Build for itch.io (relative paths + ZIP)
+
+# Preview production build
+npm run preview
 ```
 
 ---
@@ -82,9 +89,10 @@ src/
 └── main.ts        # Entry point
 
 tests/
-├── unit/          # Unit tests
-├── integration/   # Integration tests
-└── browser/       # E2E browser tests
+├── unit/          # Unit tests (Vitest)
+├── integration/   # Integration tests (Vitest)
+├── browser/       # Browser visual tests (Vitest + Playwright)
+└── e2e/           # End-to-end tests (Playwright)
 ```
 
 ---

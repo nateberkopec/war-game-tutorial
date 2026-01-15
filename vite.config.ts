@@ -3,11 +3,11 @@ import { resolve } from 'path'
 
 export default defineConfig(({ command, mode }) => ({
   // Set base path based on build target:
-  // - GitHub Pages: /war-game-tutorial/
+  // - GitHub Pages (ghpages mode): /war-game-tutorial/
   // - itch.io: ./ (relative)
-  // - Development: /
+  // - Development/local preview: /
   base: command === 'build' 
-    ? (mode === 'itchio' ? './' : '/war-game-tutorial/') 
+    ? (mode === 'itchio' ? './' : mode === 'ghpages' ? '/war-game-tutorial/' : '/') 
     : '/',
   resolve: {
     alias: {

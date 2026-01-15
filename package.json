@@ -12,7 +12,9 @@
     "test:watch": "vitest",
     "test:browser": "vitest run --config vitest.browser.config.ts",
     "test:coverage": "vitest run --coverage",
-    "test:all": "npm run test && npm run test:browser"
+    "test:all": "npm run test && npm run test:browser",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "keywords": [
     "game",
@@ -27,8 +29,10 @@
     "three": "^0.182.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "@types/three": "^0.182.0",
     "@vitest/browser": "^4.0.17",
+    "@vitest/browser-playwright": "^4.0.17",
     "@vitest/coverage-v8": "^4.0.17",
     "jsdom": "^27.4.0",
     "playwright": "^1.57.0",

@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config'
 import { resolve } from 'path'
+import { playwright } from '@vitest/browser-playwright'
 
 export default defineConfig({
   resolve: {
@@ -9,11 +10,14 @@ export default defineConfig({
       '@ui': resolve(__dirname, 'src/ui'),
     },
   },
+  optimizeDeps: {
+    exclude: ['fsevents'],
+  },
   test: {
     include: ['tests/browser/**/*.test.ts'],
     browser: {
       enabled: true,
-      provider: 'playwright',
+      provider: playwright(),
       headless: true,
       instances: [{ browser: 'chromium' }],
     },
