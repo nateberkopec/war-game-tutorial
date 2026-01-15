@@ -25,7 +25,13 @@ interface GameUI {
   scene: GameScene
   textManager: UITextManager
   inputManager: InputManager
+  autoDrawButton: HTMLButtonElement | null
 }
+
+// Auto-draw state
+let isAutoDrawing = false
+let autoDrawTimeoutId: number | null = null
+const AUTO_DRAW_DELAY = 800 // ms between auto-draws
 
 let engine: WarGameEngine | null = null
 let gameUI: GameUI | null = null
@@ -95,7 +101,10 @@ async function startGame(player1Name: string, player2Name: string): Promise<void
   const textManager = new UITextManager()
   const inputManager = new InputManager()
 
-  gameUI = { scene, textManager, inputManager }
+  gameUI = { scene, textManager, inputManager, autoDrawButton: null }
+
+  // Create auto-draw button
+  createAutoDrawButton()
 
   // Subscribe to engine events
   setupEngineEventHandlers()
@@ -228,6 +237,89 @@ function setupEngineEventHandlers(): void {
   })
 }
 
+function createAutoDrawButton(): void {
+  if (!gameUI) return
+
+  const button = document.createElement('button')
+  button.id = 'auto-draw-button'
+  button.textContent = 'Auto Draw: OFF'
+  button.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 12px 24px;
+    font-size: 16px;
+    font-weight: bold;
+    color: white;
+    background: linear-gradient(180deg, #4a90d9 0%, #357abd 100%);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    transition: transform 0.1s, box-shadow 0.1s;
+    z-index: 1000;
+    user-select: none;
+    -webkit-user-select: none;
+  `
+
+  button.addEventListener('mouseenter', () => {
+    button.style.transform = 'scale(1.05)'
+    button.style.boxShadow = '0 6px 8px rgba(0, 0, 0, 0.4)'
+  })
+
+  button.addEventListener('mouseleave', () => {
+    button.style.transform = 'scale(1)'
+    button.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.3)'
+  })
+
+  button.addEventListener('click', (e) => {
+    e.stopPropagation()
+    toggleAutoDraw()
+  })
+
+  document.body.appendChild(button)
+  gameUI.autoDrawButton = button
+}
+
+function toggleAutoDraw(): void {
+  isAutoDrawing = !isAutoDrawing
+  
+  if (gameUI?.autoDrawButton) {
+    if (isAutoDrawing) {
+      gameUI.autoDrawButton.textContent = 'Auto Draw: ON'
+      gameUI.autoDrawButton.style.background = 'linear-gradient(180deg, #5cb85c 0%, #449d44 100%)'
+    } else {
+      gameUI.autoDrawButton.textContent = 'Auto Draw: OFF'
+      gameUI.autoDrawButton.style.background = 'linear-gradient(180deg, #4a90d9 0%, #357abd 100%)'
+      // Clear any pending auto-draw
+      if (autoDrawTimeoutId !== null) {
+        clearTimeout(autoDrawTimeoutId)
+        autoDrawTimeoutId = null
+      }
+    }
+  }
+}
+
+function stopAutoDraw(): void {
+  isAutoDrawing = false
+  if (autoDrawTimeoutId !== null) {
+    clearTimeout(autoDrawTimeoutId)
+    autoDrawTimeoutId = null
+  }
+  if (gameUI?.autoDrawButton) {
+    gameUI.autoDrawButton.textContent = 'Auto Draw: OFF'
+    gameUI.autoDrawButton.style.background = 'linear-gradient(180deg, #4a90d9 0%, #357abd 100%)'
+  }
+}
+
+function removeAutoDrawButton(): void {
+  if (gameUI?.autoDrawButton) {
+    gameUI.autoDrawButton.remove()
+    gameUI.autoDrawButton = null
+  }
+  stopAutoDraw()
+}
+
 async function gameLoop(): Promise<void> {
   if (!engine || !gameUI) return
 
@@ -238,8 +330,22 @@ async function gameLoop(): Promise<void> {
     return
   }
 
-  // Wait for user input
-  await waitForAnyInput()
+  // Wait for user input OR auto-draw timer
+  if (isAutoDrawing) {
+    await new Promise<void>((resolve) => {
+      autoDrawTimeoutId = window.setTimeout(resolve, AUTO_DRAW_DELAY)
+    })
+    autoDrawTimeoutId = null
+  } else {
+    await waitForAnyInput()
+  }
+
+  // Check if game ended or auto-draw was stopped while waiting
+  if (!engine || !gameUI) return
+  const currentState = engine.getState()
+  if (currentState.phase === 'finished') {
+    return
+  }
 
   // Execute draw
   try {
@@ -305,6 +411,7 @@ async function handleGameEnd(winner: PlayerId, stats: GameStats): Promise<void> 
   gameUI.scene.stop()
   gameUI.inputManager.dispose()
   gameUI.textManager.dispose()
+  removeAutoDrawButton()
 
   // Fire celebration effects
   fireConfetti()
@@ -346,6 +453,7 @@ async function handleGameDraw(reason: string, stats: GameStats): Promise<void> {
   gameUI.scene.stop()
   gameUI.inputManager.dispose()
   gameUI.textManager.dispose()
+  removeAutoDrawButton()
 
   // Show draw screen (using victory screen with draw message)
   const victoryScreen = new VictoryScreen({
