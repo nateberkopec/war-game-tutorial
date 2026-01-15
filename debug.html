@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>War Card Game - Card Debug</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      
+      html, body {
+        width: 100%;
+        min-height: 100%;
+        background-color: #1a1a2e;
+        font-family: Arial, sans-serif;
+      }
+      
+      .container {
+        padding: 20px;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+      
+      h1 {
+        color: #ffffff;
+        text-align: center;
+        margin-bottom: 30px;
+        font-size: 36px;
+        text-shadow: 0 0 20px rgba(255,255,255,0.3);
+      }
+      
+      h2 {
+        color: #a8dadc;
+        margin: 20px 0 15px 0;
+        font-size: 24px;
+        border-bottom: 2px solid #457b9d;
+        padding-bottom: 8px;
+      }
+      
+      .suit-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 30px;
+        justify-content: center;
+      }
+      
+      .card-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+      }
+      
+      .card-label {
+        color: #888;
+        font-size: 12px;
+      }
+      
+      .back-section {
+        text-align: center;
+        margin-top: 40px;
+      }
+      
+      #app {
+        width: 100%;
+        height: 600px;
+        margin-top: 40px;
+      }
+      
+      .controls {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      
+      .controls button {
+        background: #457b9d;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        margin: 0 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      
+      .controls button:hover {
+        background: #1d3557;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Card Debug View</h1>
+      <p style="color: #888; text-align: center; margin-bottom: 20px;">
+        All 52 cards rendered as 2D textures for debugging deck appearance
+      </p>
+      <div id="cards-container"></div>
+      
+      <div class="back-section">
+        <h2>Card Back</h2>
+        <div id="card-back-container"></div>
+      </div>
+      
+      <h2 style="text-align: center; margin-top: 40px;">3D Preview</h2>
+      <div class="controls">
+        <button id="rotate-btn">Toggle Rotation</button>
+        <button id="flip-btn">Flip All Cards</button>
+      </div>
+      <div id="app"></div>
+    </div>
+    <script type="module" src="/src/debug.ts"></script>
+  </body>
+</html>

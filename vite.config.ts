@@ -21,6 +21,10 @@ export default defineConfig(({ command, mode }) => ({
     chunkSizeWarningLimit: 600,
     // Single bundle for itch.io distribution
     rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+        debug: resolve(__dirname, 'debug.html'),
+      },
       output: {
         // Keep as single bundle - required for itch.io HTML5 games
         manualChunks: undefined,
