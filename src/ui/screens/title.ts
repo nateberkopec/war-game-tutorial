@@ -3,6 +3,8 @@
  */
 
 import { createButton, createTextInput } from '../text'
+import type { RulePreset } from '../../engine/types'
+import { getPresetNames, describePreset } from '../../engine/presets'
 
 /**
  * Player info collected from the title screen.
@@ -12,6 +14,8 @@ export interface TitleScreenResult {
   player2Name: string
   /** Optional seed for reproducible games */
   seed?: string
+  /** Selected rule preset */
+  preset: RulePreset
 }
 
 /**
@@ -24,6 +28,8 @@ export interface TitleScreenConfig {
   defaultPlayer2Name?: string
   /** Default seed value */
   defaultSeed?: string
+  /** Default preset */
+  defaultPreset?: RulePreset
   /** Callback when game starts */
   onStart?: (result: TitleScreenResult) => void
 }
@@ -37,9 +43,11 @@ export class TitleScreen {
   private player1Input: HTMLInputElement | null = null
   private player2Input: HTMLInputElement | null = null
   private seedInput: HTMLInputElement | null = null
+  private selectedPreset: RulePreset = 'classic'
 
   constructor(config: TitleScreenConfig = {}) {
     this.onStartCallback = config.onStart
+    this.selectedPreset = config.defaultPreset || 'classic'
     this.container = this.createContainer()
     this.render(config)
   }
@@ -125,6 +133,10 @@ export class TitleScreen {
     inputsContainer.appendChild(player1Row.container)
     inputsContainer.appendChild(player2Row.container)
 
+    // Preset selection
+    const presetSection = this.createPresetSection()
+    inputsContainer.appendChild(presetSection)
+
     // Seed input row (optional, in a collapsible section)
     const seedSection = this.createSeedSection(config.defaultSeed)
     inputsContainer.appendChild(seedSection)
@@ -142,6 +154,95 @@ export class TitleScreen {
     this.container.appendChild(subtitle)
     this.container.appendChild(inputsContainer)
     this.container.appendChild(startButton)
+  }
+
+  private createPresetSection(): HTMLElement {
+    const container = document.createElement('div')
+    container.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      margin-top: 20px;
+    `
+
+    const label = document.createElement('label')
+    label.textContent = 'Game Mode:'
+    label.style.cssText = `
+      font-size: 18px;
+      color: #a8dadc;
+    `
+
+    const buttonsContainer = document.createElement('div')
+    buttonsContainer.style.cssText = `
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      max-width: 500px;
+    `
+
+    const presets = getPresetNames().filter(p => p !== 'custom')
+    const presetButtons: HTMLButtonElement[] = []
+
+    for (const preset of presets) {
+      const btn = document.createElement('button')
+      btn.textContent = preset.charAt(0).toUpperCase() + preset.slice(1)
+      btn.title = describePreset(preset)
+      btn.style.cssText = `
+        background: ${preset === this.selectedPreset ? '#457b9d' : 'rgba(69, 123, 157, 0.3)'};
+        border: 2px solid ${preset === this.selectedPreset ? '#a8dadc' : '#457b9d'};
+        color: white;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s ease;
+        pointer-events: auto;
+      `
+
+      btn.addEventListener('mouseenter', () => {
+        if (preset !== this.selectedPreset) {
+          btn.style.background = 'rgba(69, 123, 157, 0.5)'
+        }
+      })
+      btn.addEventListener('mouseleave', () => {
+        if (preset !== this.selectedPreset) {
+          btn.style.background = 'rgba(69, 123, 157, 0.3)'
+        }
+      })
+
+      btn.addEventListener('click', () => {
+        this.selectedPreset = preset
+        // Update button styles
+        presetButtons.forEach(b => {
+          const isSelected = b === btn
+          b.style.background = isSelected ? '#457b9d' : 'rgba(69, 123, 157, 0.3)'
+          b.style.borderColor = isSelected ? '#a8dadc' : '#457b9d'
+        })
+        // Update description
+        descriptionEl.textContent = describePreset(preset)
+      })
+
+      presetButtons.push(btn)
+      buttonsContainer.appendChild(btn)
+    }
+
+    const descriptionEl = document.createElement('p')
+    descriptionEl.textContent = describePreset(this.selectedPreset)
+    descriptionEl.style.cssText = `
+      font-size: 14px;
+      color: #888;
+      text-align: center;
+      margin: 0;
+      min-height: 20px;
+    `
+
+    container.appendChild(label)
+    container.appendChild(buttonsContainer)
+    container.appendChild(descriptionEl)
+
+    return container
   }
 
   private createSeedSection(defaultSeed?: string): HTMLElement {
@@ -287,6 +388,7 @@ export class TitleScreen {
       player1Name,
       player2Name,
       seed,
+      preset: this.selectedPreset,
     })
   }
 
