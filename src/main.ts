@@ -56,16 +56,16 @@ async function init(): Promise<void> {
     defaultPlayer2Name: 'Player 2',
   })
   
-  // Start the game with the player names
-  startGame(result.player1Name, result.player2Name)
+  // Start the game with the player names and optional seed
+  startGame(result.player1Name, result.player2Name, result.seed)
 }
 
 // =============================================================================
 // Game Flow
 // =============================================================================
 
-async function startGame(player1Name: string, player2Name: string): Promise<void> {
-  console.log(`Starting game: ${player1Name} vs ${player2Name}`)
+async function startGame(player1Name: string, player2Name: string, seed?: string): Promise<void> {
+  console.log(`Starting game: ${player1Name} vs ${player2Name}${seed ? ` (seed: ${seed})` : ''}`)
 
   // Clean up previous game UI if any
   if (gameUI) {
@@ -83,7 +83,8 @@ async function startGame(player1Name: string, player2Name: string): Promise<void
     console.log('Quick mode enabled - first to 30 cards wins!')
   }
   
-  engine = quickMode ? new WarGameEngine(QUICK_CONFIG) : new WarGameEngine()
+  const config = quickMode ? { ...QUICK_CONFIG, seed } : { seed }
+  engine = new WarGameEngine(config)
   engine.setPlayers(
     { id: 'player1', name: player1Name },
     { id: 'player2', name: player2Name }
@@ -323,13 +324,13 @@ async function handleGameEnd(winner: PlayerId, stats: GameStats): Promise<void> 
         defaultPlayer1Name: state.players.player1.name,
         defaultPlayer2Name: state.players.player2.name,
       })
-      startGame(result.player1Name, result.player2Name)
+      startGame(result.player1Name, result.player2Name, result.seed)
     },
     onMainMenu: async () => {
       victoryScreen.hide()
       victoryScreen.dispose()
       const result = await showTitleScreen({})
-      startGame(result.player1Name, result.player2Name)
+      startGame(result.player1Name, result.player2Name, result.seed)
     }
   })
   victoryScreen.show()
@@ -359,13 +360,13 @@ async function handleGameDraw(reason: string, stats: GameStats): Promise<void> {
         defaultPlayer1Name: state.players.player1.name,
         defaultPlayer2Name: state.players.player2.name,
       })
-      startGame(result.player1Name, result.player2Name)
+      startGame(result.player1Name, result.player2Name, result.seed)
     },
     onMainMenu: async () => {
       victoryScreen.hide()
       victoryScreen.dispose()
       const result = await showTitleScreen({})
-      startGame(result.player1Name, result.player2Name)
+      startGame(result.player1Name, result.player2Name, result.seed)
     }
   })
   victoryScreen.show()
