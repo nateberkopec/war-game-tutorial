@@ -1,336 +1,373 @@
 /**
- * War Card Game - Main Entry Point
- * 
- * This file integrates all modules and implements the game flow:
- * 1. Title Screen -> Player name input
- * 2. Game Screen -> Draw cards, show winner
- * 3. Victory Screen -> Show stats, play again
+ * Main entry point for War Card Game.
+ * Integrates engine, UI, and persistence systems.
  */
 
-import { WarGameEngine } from './engine'
-import type { GameEvent, PlayerId, Card, GameStats } from './engine/types'
+import { WarGameEngine, type PlayerId, type GameStats } from './engine'
 import {
   GameScene,
   showTitleScreen,
-  showVictoryScreen,
-  UITextManager,
+  VictoryScreen,
   InputManager,
-  showLoadingScreen,
-  Animator,
+  waitForAnyInput,
+  UITextManager,
   fireConfetti,
-  type Rank,
-  type Suit,
+  fireSideConfetti,
+  withLoadingScreen
 } from './ui'
+import type { Rank, Suit } from './ui'
 
 // =============================================================================
 // Game State
 // =============================================================================
 
-interface GameController {
-  engine: WarGameEngine
+interface GameUI {
   scene: GameScene
   textManager: UITextManager
   inputManager: InputManager
-  animator: Animator
-  player1Name: string
-  player2Name: string
-  waitingForInput: boolean
-  phase: 'title' | 'playing' | 'showingResult' | 'war' | 'victory'
 }
 
-let game: GameController | null = null
+let engine: WarGameEngine | null = null
+let gameUI: GameUI | null = null
 
 // =============================================================================
 // Initialization
 // =============================================================================
 
 async function init(): Promise<void> {
+  console.log('War Card Game - Initializing...')
+
   // Show loading screen while initializing
-  const loadingScreen = showLoadingScreen({ text: 'Loading...' })
-  
-  // Small delay to ensure loading screen is visible
-  await new Promise(resolve => setTimeout(resolve, 100))
-  loadingScreen.setProgress(0.5)
-  
-  await new Promise(resolve => setTimeout(resolve, 200))
-  loadingScreen.setProgress(1)
-  
-  await loadingScreen.hide()
-  loadingScreen.dispose()
-  
-  // Start the game loop
-  await showTitleAndStart()
-}
+  await withLoadingScreen(
+    async (updateProgress) => {
+      updateProgress(0.3)
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      updateProgress(0.6)
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      updateProgress(1)
+      await new Promise((resolve) => setTimeout(resolve, 200))
+    },
+    { minDisplayTime: 500, text: 'Loading War Card Game...' }
+  )
 
-// =============================================================================
-// Title Screen
-// =============================================================================
-
-async function showTitleAndStart(): Promise<void> {
-  const result = await showTitleScreen({
+  // Show title screen and wait for player names
+  showTitleScreen({
     defaultPlayer1Name: 'Player 1',
     defaultPlayer2Name: 'Player 2',
+    onStart: (result) => {
+      startGame(result.player1Name, result.player2Name)
+    }
   })
-  
-  await startGame(result.player1Name, result.player2Name)
 }
 
 // =============================================================================
-// Game Initialization
+// Game Flow
 // =============================================================================
 
 async function startGame(player1Name: string, player2Name: string): Promise<void> {
-  // Create game components
-  const container = document.getElementById('app')!
-  const scene = new GameScene(container)
-  const textManager = new UITextManager()
-  const inputManager = new InputManager()
-  const animator = new Animator()
-  
-  // Create engine with classic rules
-  const engine = new WarGameEngine()
-  
-  // Set up players
+  console.log(`Starting game: ${player1Name} vs ${player2Name}`)
+
+  // Create engine
+  engine = new WarGameEngine()
   engine.setPlayers(
     { id: 'player1', name: player1Name },
     { id: 'player2', name: player2Name }
   )
-  
-  // Initialize game state
-  game = {
-    engine,
-    scene,
-    textManager,
-    inputManager,
-    animator,
-    player1Name,
-    player2Name,
-    waitingForInput: false,
-    phase: 'playing',
-  }
-  
+
+  // Set up UI
+  const container = document.getElementById('app')!
+  const scene = new GameScene(container)
+  const textManager = new UITextManager()
+  const inputManager = new InputManager()
+
+  gameUI = { scene, textManager, inputManager }
+
   // Subscribe to engine events
-  setupEngineEvents(engine)
-  
+  setupEngineEventHandlers()
+
   // Start the engine
   engine.start()
-  
-  // Setup scene with initial deck counts
+
+  // Set up initial deck display
   const state = engine.getState()
   scene.setup(state.players.player1.deck.length, state.players.player2.deck.length)
-  
-  // Start rendering
   scene.start()
-  
-  // Hook animator into render loop
-  scene.getSceneManager().onRender(() => animator.update())
-  
-  // Update UI
-  updatePlayerInfo()
-  
-  // Show initial prompt
-  textManager.setPrompt('Click anywhere to draw')
-  
-  // Setup input handling
-  inputManager.onTap(handleInput)
-  game.waitingForInput = true
+
+  // Show player info
+  showPlayerInfo()
+
+  // Show prompt
+  textManager.showAnnouncement('Click anywhere to draw', 2000)
+
+  // Start game loop
+  gameLoop()
 }
 
-// =============================================================================
-// Engine Event Handling
-// =============================================================================
+function showPlayerInfo(): void {
+  if (!engine || !gameUI) return
 
-function setupEngineEvents(engine: WarGameEngine): void {
-  engine.on('*', (event: GameEvent) => {
-    switch (event.type) {
-      case 'cardsDrawn':
-        handleCardsDrawn(event.cards.player1, event.cards.player2)
-        break
-      case 'comparison':
-        handleComparison(event.result, event.cards)
-        break
-      case 'roundWon':
-        handleRoundWon(event.winner, event.cardsWon)
-        break
-      case 'warStarted':
-        handleWarStarted(event.depth)
-        break
-      case 'warResolved':
-        handleWarResolved(event.winner, event.totalCards)
-        break
-      case 'gameEnded':
-        handleGameEnded(event.winner, event.stats)
-        break
+  const state = engine.getState()
+  const { textManager } = gameUI
+
+  // Player 1 info (left side)
+  textManager.setText(
+    'player1-name',
+    state.players.player1.name,
+    { x: '15%', y: '10%' },
+    { fontSize: '24px', fontWeight: 'bold' }
+  )
+  textManager.setText(
+    'player1-cards',
+    `Cards: ${state.players.player1.deck.length}`,
+    { x: '15%', y: '15%' },
+    { fontSize: '18px' }
+  )
+
+  // Player 2 info (right side)
+  textManager.setText(
+    'player2-name',
+    state.players.player2.name,
+    { x: '85%', y: '10%' },
+    { fontSize: '24px', fontWeight: 'bold' }
+  )
+  textManager.setText(
+    'player2-cards',
+    `Cards: ${state.players.player2.deck.length}`,
+    { x: '85%', y: '15%' },
+    { fontSize: '18px' }
+  )
+}
+
+function setupEngineEventHandlers(): void {
+  if (!engine) return
+
+  engine.on('roundStarted', (event) => {
+    if (event.type === 'roundStarted') {
+      console.log(`Round ${event.roundNumber} started`)
+    }
+  })
+
+  engine.on('cardsDrawn', (event) => {
+    if (event.type === 'cardsDrawn' && gameUI) {
+      const { cards } = event
+      // Show cards face up
+      gameUI.scene.showBattleCard(
+        'player1',
+        cards.player1.rank as Rank,
+        cards.player1.suit as Suit,
+        true
+      )
+      gameUI.scene.showBattleCard(
+        'player2',
+        cards.player2.rank as Rank,
+        cards.player2.suit as Suit,
+        true
+      )
+    }
+  })
+
+  engine.on('comparison', (event) => {
+    if (event.type === 'comparison' && gameUI) {
+      if (event.result === 'tie') {
+        gameUI.textManager.showAnnouncement('WAR!', 1500)
+      }
+    }
+  })
+
+  engine.on('roundWon', (event) => {
+    if (event.type === 'roundWon' && gameUI && engine) {
+      const state = engine.getState()
+      const winnerName = state.players[event.winner].name
+      gameUI.textManager.showAnnouncement(`${winnerName} wins!`, 1000)
+    }
+  })
+
+  engine.on('warStarted', (event) => {
+    if (event.type === 'warStarted' && gameUI) {
+      if (event.depth > 1) {
+        gameUI.textManager.showAnnouncement('DOUBLE WAR!', 1500)
+      }
+    }
+  })
+
+  engine.on('warResolved', (event) => {
+    if (event.type === 'warResolved' && gameUI && engine) {
+      const state = engine.getState()
+      const winnerName = state.players[event.winner].name
+      gameUI.textManager.showAnnouncement(`${winnerName} wins ${event.totalCards} cards!`, 1500)
+      // Clear war pile
+      gameUI.scene.clearWarPile()
+    }
+  })
+
+  engine.on('gameEnded', (event) => {
+    if (event.type === 'gameEnded') {
+      handleGameEnd(event.winner, event.stats)
+    }
+  })
+
+  engine.on('gameDraw', (event) => {
+    if (event.type === 'gameDraw') {
+      handleGameDraw(event.reason, event.stats)
     }
   })
 }
 
-// =============================================================================
-// Input Handling
-// =============================================================================
+async function gameLoop(): Promise<void> {
+  if (!engine || !gameUI) return
 
-function handleInput(): void {
-  if (!game || !game.waitingForInput) return
-  
-  game.waitingForInput = false
-  
-  if (game.phase === 'playing' || game.phase === 'war') {
-    // Draw cards
-    try {
-      game.engine.draw()
-    } catch (error) {
-      console.error('Error during draw:', error)
-    }
-  } else if (game.phase === 'showingResult') {
-    // Continue to next round
-    continueAfterResult()
+  const state = engine.getState()
+
+  // Check if game is over
+  if (state.phase === 'finished') {
+    return
+  }
+
+  // Wait for user input
+  await waitForAnyInput()
+
+  // Execute draw
+  try {
+    engine.draw()
+  } catch (error) {
+    console.error('Error during draw:', error)
+    return
+  }
+
+  // Update UI
+  updateUI()
+
+  // Small delay for visual feedback
+  await new Promise((resolve) => setTimeout(resolve, 500))
+
+  // Clear battlefield for next round (unless in war)
+  const newState = engine.getState()
+  if (newState.phase === 'playing') {
+    gameUI.scene.clearBattlefield()
+  }
+
+  // Continue game loop if not finished
+  if (newState.phase !== 'finished') {
+    gameLoop()
   }
 }
 
-function continueAfterResult(): void {
-  if (!game) return
-  
-  // Clear battlefield
-  game.scene.clearBattlefield()
-  
-  // Update deck counts
-  const state = game.engine.getState()
-  game.scene.updateDecks(
+function updateUI(): void {
+  if (!engine || !gameUI) return
+
+  const state = engine.getState()
+
+  // Update deck visuals
+  gameUI.scene.updateDecks(
     state.players.player1.deck.length,
     state.players.player2.deck.length
   )
-  
-  // Update player info
-  updatePlayerInfo()
-  
-  // Check if game is still going
-  if (state.phase === 'finished') {
-    return // Will be handled by gameEnded event
-  }
-  
-  // Reset for next round
-  game.phase = 'playing'
-  game.textManager.setPrompt('Click anywhere to draw')
-  game.waitingForInput = true
+
+  // Update card count text
+  gameUI.textManager.setText(
+    'player1-cards',
+    `Cards: ${state.players.player1.deck.length}`,
+    { x: '15%', y: '15%' },
+    { fontSize: '18px' }
+  )
+  gameUI.textManager.setText(
+    'player2-cards',
+    `Cards: ${state.players.player2.deck.length}`,
+    { x: '85%', y: '15%' },
+    { fontSize: '18px' }
+  )
 }
 
-// =============================================================================
-// Event Handlers
-// =============================================================================
+async function handleGameEnd(winner: PlayerId, stats: GameStats): Promise<void> {
+  if (!engine || !gameUI) return
 
-function handleCardsDrawn(card1: Card, card2: Card): void {
-  if (!game) return
-  
-  // Show cards on battlefield
-  game.scene.showBattleCard('player1', card1.rank as Rank, card1.suit as Suit, true)
-  game.scene.showBattleCard('player2', card2.rank as Rank, card2.suit as Suit, true)
-  
-  // Update player info
-  updatePlayerInfo()
-}
+  const state = engine.getState()
+  const winnerName = state.players[winner].name
 
-function handleComparison(result: PlayerId | 'tie', _cards: [Card, Card]): void {
-  if (!game) return
-  
-  if (result === 'tie') {
-    // War will be handled by warStarted event
-    return
-  }
-  
-  // Show winner announcement
-  const winnerName = result === 'player1' ? game.player1Name : game.player2Name
-  game.textManager.showRoundResult(`${winnerName} wins!`, 1000)
-}
+  console.log(`Game ended! ${winnerName} wins!`)
 
-function handleRoundWon(_winner: PlayerId, _cardsWon: Card[]): void {
-  if (!game) return
-  
-  game.phase = 'showingResult'
-  game.textManager.setPrompt('Click to continue')
-  game.waitingForInput = true
-}
+  // Clean up game UI
+  gameUI.scene.stop()
+  gameUI.inputManager.dispose()
+  gameUI.textManager.dispose()
 
-async function handleWarStarted(_depth: number): Promise<void> {
-  if (!game) return
-  
-  game.phase = 'war'
-  
-  // Show dramatic "WAR!" announcement
-  await game.textManager.showWarAnnouncement()
-  
-  // Update prompt
-  game.textManager.setPrompt('Click to draw war cards')
-  game.waitingForInput = true
-}
-
-function handleWarResolved(winner: PlayerId, totalCards: number): void {
-  if (!game) return
-  
-  const winnerName = winner === 'player1' ? game.player1Name : game.player2Name
-  game.textManager.showRoundResult(`${winnerName} wins ${totalCards} cards!`, 1500)
-  
-  game.phase = 'showingResult'
-  game.textManager.setPrompt('Click to continue')
-  game.waitingForInput = true
-}
-
-async function handleGameEnded(winner: PlayerId, stats: GameStats): Promise<void> {
-  if (!game) return
-  
-  game.phase = 'victory'
-  game.waitingForInput = false
-  game.inputManager.dispose()
-  
-  // Fire confetti
+  // Fire celebration effects
   fireConfetti()
-  
-  // Small delay before showing victory screen
-  await new Promise(resolve => setTimeout(resolve, 500))
-  
+  fireSideConfetti()
+
   // Show victory screen
-  const winnerName = winner === 'player1' ? game.player1Name : game.player2Name
-  const action = await showVictoryScreen({
+  const victoryScreen = new VictoryScreen({
     winnerName,
     winnerId: winner,
     stats,
+    onPlayAgain: () => {
+      victoryScreen.hide()
+      victoryScreen.dispose()
+      // Show title screen again
+      showTitleScreen({
+        defaultPlayer1Name: state.players.player1.name,
+        defaultPlayer2Name: state.players.player2.name,
+        onStart: (result) => {
+          startGame(result.player1Name, result.player2Name)
+        }
+      })
+    },
+    onMainMenu: () => {
+      victoryScreen.hide()
+      victoryScreen.dispose()
+      showTitleScreen({
+        onStart: (result) => {
+          startGame(result.player1Name, result.player2Name)
+        }
+      })
+    }
   })
-  
-  // Clean up current game
-  game.scene.dispose()
-  game.textManager.dispose()
-  
-  // Handle user choice
-  if (action === 'playAgain') {
-    await startGame(game.player1Name, game.player2Name)
-  } else {
-    await showTitleAndStart()
-  }
+  victoryScreen.show()
+}
+
+async function handleGameDraw(reason: string, stats: GameStats): Promise<void> {
+  if (!engine || !gameUI) return
+
+  const state = engine.getState()
+
+  console.log(`Game ended in a draw! Reason: ${reason}`)
+
+  // Clean up game UI
+  gameUI.scene.stop()
+  gameUI.inputManager.dispose()
+  gameUI.textManager.dispose()
+
+  // Show draw screen (using victory screen with draw message)
+  const victoryScreen = new VictoryScreen({
+    winnerName: "It's a Draw!",
+    winnerId: 'player1', // Arbitrary for draws
+    stats,
+    onPlayAgain: () => {
+      victoryScreen.hide()
+      victoryScreen.dispose()
+      showTitleScreen({
+        defaultPlayer1Name: state.players.player1.name,
+        defaultPlayer2Name: state.players.player2.name,
+        onStart: (result) => {
+          startGame(result.player1Name, result.player2Name)
+        }
+      })
+    },
+    onMainMenu: () => {
+      victoryScreen.hide()
+      victoryScreen.dispose()
+      showTitleScreen({
+        onStart: (result) => {
+          startGame(result.player1Name, result.player2Name)
+        }
+      })
+    }
+  })
+  victoryScreen.show()
 }
 
 // =============================================================================
-// UI Updates
-// =============================================================================
-
-function updatePlayerInfo(): void {
-  if (!game) return
-  
-  const state = game.engine.getState()
-  
-  game.textManager.setPlayerInfo(
-    'player1',
-    game.player1Name,
-    state.players.player1.deck.length
-  )
-  
-  game.textManager.setPlayerInfo(
-    'player2',
-    game.player2Name,
-    state.players.player2.deck.length
-  )
-}
-
-// =============================================================================
-// Start
+// Start the Application
 // =============================================================================
 
 // Wait for DOM to be ready
