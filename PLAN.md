@@ -585,11 +585,18 @@ Before Phase 3, ensure:
   - Create ZIP with index.html + assets
   - Test in itch.io sandbox
 
-- [ ] **4.17** Documentation
+- [ ] **4.17** Deploy to GitHub Pages
+  - Create `.github/workflows/deploy.yml` for GitHub Pages deployment
+  - Configure Vite base path for GitHub Pages (`/war-game-tutorial/`)
+  - Workflow triggers on push to main, builds with Vite, deploys to gh-pages
+  - Game will be live at: https://nateberkopec.github.io/war-game-tutorial/
+
+- [ ] **4.18** Documentation
   - Update README with build/run instructions
   - Document game rules for players
+  - Add links to live demo (GitHub Pages) and itch.io
 
-**Deliverable**: Shippable game ready for itch.io
+**Deliverable**: Shippable game ready for itch.io and live on GitHub Pages
 
 ---
 
@@ -599,9 +606,9 @@ Before Phase 3, ensure:
 |-------|------------|-----------------|---------------|-------------------|
 | **1** | 1.1-1.7 (7 tasks) | 2.1-2.5 (5 tasks) | 3.1-3.5 (5 tasks) | 4.1-4.8 (8 tasks) |
 | **2** | 1.8-1.12 (5 tasks) | 2.6-2.8 (3 tasks) | 3.6-3.11 (6 tasks) | 4.9-4.12 (4 tasks) |
-| **3** | 1.13-1.14 (2 tasks) | 2.9-2.10 (2 tasks) | 3.12-3.16 (5 tasks) | 4.13-4.17 (5 tasks) |
+| **3** | 1.13-1.14 (2 tasks) | 2.9-2.10 (2 tasks) | 3.12-3.16 (5 tasks) | 4.13-4.18 (6 tasks) |
 
-**Total**: 57 tasks across 4 workstreams
+**Total**: 58 tasks across 4 workstreams
 
 ---
 

@@ -72,7 +72,11 @@ function create_prompt_files
     # Agent 1 - Engine
     echo 'You are Agent 1 (W1: Core Engine).
 
-Read SPEC.md and PLAN.md to understand the project and your tasks.
+FIRST: Pull latest and assess your current state:
+1. Run: git fetch origin main && git merge origin/main --no-edit
+2. Run: git status && git log --oneline -5
+3. Check what files exist in src/engine/ to see what has been done
+4. Read PLAN.md to find your tasks and determine which phase/task you are on
 
 YOUR WORKSTREAM: W1 - Core Engine
 YOUR BRANCH: w1-engine
@@ -80,10 +84,7 @@ YOUR DIRECTORY: src/engine/*
 
 You own all game logic: types, deck, RNG, events, engine, war resolution, win conditions.
 
-START WITH:
-1. Read SPEC.md (full game specification)
-2. Read PLAN.md (find "W1: Core Engine" sections and "Agent 1" instructions)
-3. Begin Phase 1, Task 1.1: Create src/engine/types.ts
+Read SPEC.md and PLAN.md (find "W1: Core Engine" sections and "Agent 1" instructions).
 
 IMPORTANT: Task 1.1 (types.ts) unblocks Agents 2 and 3. Prioritize this first, commit and push when done.
 
@@ -95,7 +96,11 @@ Then STOP and wait for human to confirm before starting Phase 2.' > "$REPO_ROOT/
     # Agent 2 - Persistence
     echo 'You are Agent 2 (W2: Persistence).
 
-Read SPEC.md and PLAN.md to understand the project and your tasks.
+FIRST: Pull latest and assess your current state:
+1. Run: git fetch origin main && git merge origin/main --no-edit
+2. Run: git status && git log --oneline -5
+3. Check what files exist in src/persistence/ to see what has been done
+4. Read PLAN.md to find your tasks and determine which phase/task you are on
 
 YOUR WORKSTREAM: W2 - Persistence
 YOUR BRANCH: w2-persistence
@@ -103,12 +108,9 @@ YOUR DIRECTORY: src/persistence/*
 
 You own all storage: LocalStorage abstraction, profiles, stats, settings, saves, replays.
 
-START WITH:
-1. Read SPEC.md (full game specification)
-2. Read PLAN.md (find "W2: Persistence" sections and "Agent 2" instructions)
-3. Begin Phase 1, Task 2.2: Create src/persistence/storage.ts (storage abstraction - no dependencies)
+Read SPEC.md and PLAN.md (find "W2: Persistence" sections and "Agent 2" instructions).
 
-WAIT FOR: Agent 1 to complete types.ts before Task 2.1. You can start with 2.2 immediately.
+WAIT FOR: Agent 1 to complete types.ts before importing types. You can start with storage.ts immediately.
 To get types when ready: git fetch origin w1-engine && git merge origin/w1-engine --no-edit
 
 Commit messages should start with [W2], e.g.: git commit -m "[W2] Implement LocalStorage adapter"
@@ -119,7 +121,11 @@ Then STOP and wait for human to confirm before starting Phase 2.' > "$REPO_ROOT/
     # Agent 3 - Rendering
     echo 'You are Agent 3 (W3: Rendering).
 
-Read SPEC.md and PLAN.md to understand the project and your tasks.
+FIRST: Pull latest and assess your current state:
+1. Run: git fetch origin main && git merge origin/main --no-edit
+2. Run: git status && git log --oneline -5
+3. Check what files exist in src/ui/ to see what has been done
+4. Read PLAN.md to find your tasks and determine which phase/task you are on
 
 YOUR WORKSTREAM: W3 - Rendering
 YOUR BRANCH: w3-rendering
@@ -127,10 +133,7 @@ YOUR DIRECTORY: src/ui/*
 
 You own all visuals: Three.js scene, cards, textures, layout, animations, screens, effects.
 
-START WITH:
-1. Read SPEC.md (full game specification)
-2. Read PLAN.md (find "W3: Rendering" sections and "Agent 3" instructions)
-3. Begin Phase 1, Task 3.1: Create src/ui/scene.ts (Three.js setup - no dependencies)
+Read SPEC.md and PLAN.md (find "W3: Rendering" sections and "Agent 3" instructions).
 
 Phase 1 is fully independent - no waiting required. You can define local placeholder types if needed.
 In Phase 2, you will need to subscribe to engine events from Agent 1.
@@ -143,7 +146,11 @@ Then STOP and wait for human to confirm before starting Phase 2.' > "$REPO_ROOT/
     # Agent 4 - Infrastructure
     echo 'You are Agent 4 (W4: Infrastructure).
 
-Read SPEC.md and PLAN.md to understand the project and your tasks.
+FIRST: Pull latest and assess your current state:
+1. Run: git fetch origin main && git merge origin/main --no-edit
+2. Run: git status && git log --oneline -5
+3. Check what config files exist (package.json, tsconfig.json, vite.config.ts, etc.)
+4. Read PLAN.md to find your tasks and determine which phase/task you are on
 
 YOUR WORKSTREAM: W4 - Infrastructure
 YOUR BRANCH: w4-infrastructure
@@ -151,10 +158,7 @@ YOUR DIRECTORIES: tests/*, *.config.*, .github/*, package.json, tsconfig.json, i
 
 You own project setup: build config, test config, CI, and later writing tests for other agents code.
 
-START WITH:
-1. Read SPEC.md (full game specification)  
-2. Read PLAN.md (find "W4: Infrastructure" sections and "Agent 4" instructions)
-3. Begin Phase 1, Task 4.1: Initialize project with npm init and package.json
+Read SPEC.md and PLAN.md (find "W4: Infrastructure" sections and "Agent 4" instructions).
 
 CRITICAL PATH: Other agents need your build setup to run their code. Prioritize tasks 4.1-4.8.
 Create the directory structure (src/engine, src/persistence, src/ui, tests/*) so imports work.
