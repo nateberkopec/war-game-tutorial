@@ -3,6 +3,8 @@
  */
 
 import { createButton, createTextInput } from '../text'
+import { getReplayManager, type ReplayMetadata } from '../../persistence/replays'
+import type { Replay } from '../../engine/types'
 
 /**
  * Player info collected from the title screen.
@@ -22,6 +24,8 @@ export interface TitleScreenConfig {
   defaultPlayer2Name?: string
   /** Callback when game starts */
   onStart?: (result: TitleScreenResult) => void
+  /** Callback when user wants to watch a replay */
+  onWatchReplay?: (replay: Replay) => void
 }
 
 /**
@@ -30,11 +34,14 @@ export interface TitleScreenConfig {
 export class TitleScreen {
   private container: HTMLElement
   private onStartCallback?: (result: TitleScreenResult) => void
+  private onWatchReplayCallback?: (replay: Replay) => void
   private player1Input: HTMLInputElement | null = null
   private player2Input: HTMLInputElement | null = null
+  private replayModal: HTMLElement | null = null
 
   constructor(config: TitleScreenConfig = {}) {
     this.onStartCallback = config.onStart
+    this.onWatchReplayCallback = config.onWatchReplay
     this.container = this.createContainer()
     this.render(config)
   }
@@ -120,19 +127,39 @@ export class TitleScreen {
     inputsContainer.appendChild(player1Row.container)
     inputsContainer.appendChild(player2Row.container)
 
+    // Buttons container
+    const buttonsContainer = document.createElement('div')
+    buttonsContainer.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      align-items: center;
+      margin-top: 20px;
+    `
+
     // Start button
     const startButton = createButton('START GAME', () => this.handleStart(), {
       fontSize: '28px'
     })
-    startButton.style.marginTop = '20px'
     startButton.style.padding = '16px 48px'
     startButton.style.pointerEvents = 'auto'
+
+    // Watch Replay button
+    const watchReplayButton = createButton('WATCH REPLAY', () => this.showReplayList(), {
+      fontSize: '18px'
+    })
+    watchReplayButton.style.padding = '10px 24px'
+    watchReplayButton.style.pointerEvents = 'auto'
+    watchReplayButton.style.background = 'linear-gradient(180deg, #457b9d 0%, #1d3557 100%)'
+
+    buttonsContainer.appendChild(startButton)
+    buttonsContainer.appendChild(watchReplayButton)
 
     // Assemble
     this.container.appendChild(title)
     this.container.appendChild(subtitle)
     this.container.appendChild(inputsContainer)
-    this.container.appendChild(startButton)
+    this.container.appendChild(buttonsContainer)
   }
 
   private createPlayerInputRow(
@@ -182,6 +209,191 @@ export class TitleScreen {
     })
   }
 
+  private showReplayList(): void {
+    // Create modal
+    const modal = document.createElement('div')
+    modal.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 300;
+    `
+
+    const content = document.createElement('div')
+    content.style.cssText = `
+      background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+      border: 2px solid #457b9d;
+      border-radius: 12px;
+      padding: 30px;
+      max-width: 600px;
+      max-height: 80vh;
+      overflow-y: auto;
+      width: 90%;
+    `
+
+    const title = document.createElement('h2')
+    title.textContent = 'Saved Replays'
+    title.style.cssText = `
+      color: #ffffff;
+      margin: 0 0 20px 0;
+      text-align: center;
+    `
+
+    const replayManager = getReplayManager()
+    const replays = replayManager.listReplays()
+
+    if (replays.length === 0) {
+      const noReplays = document.createElement('p')
+      noReplays.textContent = 'No saved replays yet. Complete a game to save a replay!'
+      noReplays.style.cssText = `
+        color: #888;
+        text-align: center;
+        margin: 40px 0;
+      `
+      content.appendChild(title)
+      content.appendChild(noReplays)
+    } else {
+      const list = document.createElement('div')
+      list.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      `
+
+      for (const metadata of replays) {
+        const item = this.createReplayListItem(metadata, modal)
+        list.appendChild(item)
+      }
+
+      content.appendChild(title)
+      content.appendChild(list)
+    }
+
+    // Close button
+    const closeBtn = createButton('Close', () => {
+      modal.remove()
+      this.replayModal = null
+    }, { fontSize: '16px' })
+    closeBtn.style.marginTop = '20px'
+    closeBtn.style.width = '100%'
+    closeBtn.style.pointerEvents = 'auto'
+
+    content.appendChild(closeBtn)
+    modal.appendChild(content)
+
+    // Close on background click
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.remove()
+        this.replayModal = null
+      }
+    })
+
+    document.body.appendChild(modal)
+    this.replayModal = modal
+  }
+
+  private createReplayListItem(metadata: ReplayMetadata, modal: HTMLElement): HTMLElement {
+    const item = document.createElement('div')
+    item.style.cssText = `
+      background: rgba(69, 123, 157, 0.2);
+      border: 1px solid #457b9d;
+      border-radius: 8px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    `
+
+    item.addEventListener('mouseenter', () => {
+      item.style.background = 'rgba(69, 123, 157, 0.4)'
+    })
+    item.addEventListener('mouseleave', () => {
+      item.style.background = 'rgba(69, 123, 157, 0.2)'
+    })
+
+    const date = new Date(metadata.createdAt)
+    const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
+    const topRow = document.createElement('div')
+    topRow.style.cssText = `
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    `
+
+    const players = document.createElement('span')
+    players.textContent = `${metadata.player1Name} vs ${metadata.player2Name}`
+    players.style.cssText = `
+      color: #ffffff;
+      font-weight: bold;
+    `
+
+    const dateEl = document.createElement('span')
+    dateEl.textContent = dateStr
+    dateEl.style.cssText = `
+      color: #888;
+      font-size: 12px;
+    `
+
+    topRow.appendChild(players)
+    topRow.appendChild(dateEl)
+
+    const bottomRow = document.createElement('div')
+    bottomRow.style.cssText = `
+      display: flex;
+      gap: 16px;
+      font-size: 14px;
+      color: #a8dadc;
+    `
+
+    const winner = document.createElement('span')
+    winner.textContent = `Winner: ${metadata.winner}`
+
+    const rounds = document.createElement('span')
+    rounds.textContent = `${metadata.totalRounds} rounds`
+
+    const wars = document.createElement('span')
+    wars.textContent = `${metadata.warsCount} wars`
+
+    const duration = document.createElement('span')
+    duration.textContent = this.formatDuration(metadata.duration)
+
+    bottomRow.appendChild(winner)
+    bottomRow.appendChild(rounds)
+    bottomRow.appendChild(wars)
+    bottomRow.appendChild(duration)
+
+    item.appendChild(topRow)
+    item.appendChild(bottomRow)
+
+    item.addEventListener('click', () => {
+      const replayManager = getReplayManager()
+      const replay = replayManager.loadReplay(metadata.id)
+      if (replay && this.onWatchReplayCallback) {
+        modal.remove()
+        this.replayModal = null
+        this.onWatchReplayCallback(replay)
+      }
+    })
+
+    return item
+  }
+
+  private formatDuration(ms: number): string {
+    const seconds = Math.floor(ms / 1000)
+    const minutes = Math.floor(seconds / 60)
+    if (minutes > 0) {
+      return `${minutes}m ${seconds % 60}s`
+    }
+    return `${seconds}s`
+  }
+
   /**
    * Show the title screen.
    */
@@ -224,6 +436,8 @@ export class TitleScreen {
    * Clean up the title screen.
    */
   dispose(): void {
+    this.replayModal?.remove()
+    this.replayModal = null
     this.container.remove()
   }
 }
