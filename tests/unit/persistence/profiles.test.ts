@@ -8,7 +8,7 @@ import type { GameSummary, GameStats as PersistenceGameStats } from '../../../sr
 
 // Helper to create game stats matching persistence module's GameStats type
 function createGameStats(overrides: Partial<PersistenceGameStats> = {}): PersistenceGameStats {
-  return {
+  const base: PersistenceGameStats = {
     totalRounds: 10,
     warsCount: 1,
     longestWarChain: 1,
@@ -18,8 +18,8 @@ function createGameStats(overrides: Partial<PersistenceGameStats> = {}): Persist
     player1RoundsWon: 6,
     player2RoundsWon: 4,
     biggestLead: { player: 'player1', amount: 3 },
-    ...overrides,
   }
+  return { ...base, ...overrides }
 }
 
 describe('ProfileManager', () => {
