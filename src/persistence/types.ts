@@ -1,35 +1,21 @@
 /**
  * Persistence-specific types for War game
  *
- * Note: Some types here mirror or extend types from src/engine/types.ts.
- * Once Agent 1 completes types.ts, we'll import shared types from there.
- * For now, we define what we need locally to avoid blocking.
+ * Imports shared types from engine where possible, defines persistence-specific
+ * types locally.
  */
 
-// Re-export engine types when available
-// TODO: import { GameConfig, GameStats, GameEvent, PlayerId, RulePreset } from '../engine/types'
+// Re-export shared types from engine
+export { type RulePreset, type PlayerId, type GameStats } from '../engine/types'
 
-/** Rule preset names */
-export type RulePreset = 'classic' | 'quick' | 'marathon' | 'chaos' | 'custom'
+// Import for local use
+import type { RulePreset, GameStats } from '../engine/types'
 
 /** Minimal game config for persistence (full config in engine) */
 export interface GameConfigSummary {
   preset: RulePreset
   deckCount?: number
   warFaceDownCards?: number
-}
-
-/** Stats tracked per-game */
-export interface GameStats {
-  totalRounds: number
-  warsCount: number
-  longestWarChain: number
-  largestWarPot: number
-  duration: number
-  averageRoundTime: number
-  player1RoundsWon: number
-  player2RoundsWon: number
-  biggestLead: { player: 'player1' | 'player2'; amount: number }
 }
 
 /** Summary of a completed game for profile history */
@@ -39,8 +25,9 @@ export interface GameSummary {
   opponent: string
   opponentProfileId?: string
   won: boolean
+  /** Game stats from engine - persistence only uses a subset of fields */
   stats: GameStats
-  config: RulePreset | 'custom'
+  config: RulePreset
 }
 
 /** Lifetime stats tracked for a profile */
