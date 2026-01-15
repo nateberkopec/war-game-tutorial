@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:ghpages": "tsc && vite build --mode ghpages",
+    "build:itchio": "tsc && vite build --mode itchio && cd dist && zip -r ../war-game-itchio.zip .",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
