@@ -216,9 +216,11 @@ function launch_agents
     end
     
     # Build the opencode command based on dry-run flag
-    set -l opencode_cmd "opencode"
+    # Use Claude Opus 4.5 from OpenCode Zen (opencode provider, not anthropic)
+    set -l model "opencode/claude-opus-4-5"
+    set -l opencode_cmd "opencode -m $model"
     if test "$dry_run" != "true"
-        set opencode_cmd "opencode --prompt 'Read .prompts/AGENT_PROMPT.md for your instructions. Follow them precisely.'"
+        set opencode_cmd "opencode -m $model --prompt 'Read .prompts/AGENT_PROMPT.md for your instructions. Follow them precisely.'"
     end
     
     # Create session with first worktree
