@@ -74,3 +74,43 @@ export {
   initWarState,
 } from './war'
 export type { WarResolutionResult, WarState } from './war'
+
+// Presets
+export {
+  CLASSIC_CONFIG,
+  QUICK_CONFIG,
+  MARATHON_CONFIG,
+  CHAOS_CONFIG,
+  PRESETS,
+  getPreset,
+  getPresetNames,
+  describePreset,
+} from './presets'
+
+// History
+export { GameHistory, createGameHistory } from './history'
+export type { Checkpoint } from './history'
+
+// Replay
+export {
+  createReplay,
+  validateReplay,
+  ReplayPlayer,
+  createEngineFromReplay,
+  serializeReplay,
+  deserializeReplay,
+  getReplaySummary,
+} from './replay'
+
+// Stats
+export {
+  createInitialStats,
+  calculateStatsFromEvents,
+  mergeStats,
+  getMostWinningRank,
+  getMostWinningSuit,
+  getWinRate,
+  formatDuration,
+  generateStatsSummary,
+  compareStats,
+} from './stats'
