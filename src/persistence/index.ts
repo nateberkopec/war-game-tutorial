@@ -21,11 +21,14 @@ export {
   getCollection,
 } from './storage'
 
-// Types
+// Types (includes re-exports from engine/types)
 export type {
+  // Re-exported from engine
   RulePreset,
-  GameConfigSummary,
+  PlayerId,
   GameStats,
+  // Persistence-specific types
+  GameConfigSummary,
   GameSummary,
   ProfileStats,
   ProfilePreferences,
