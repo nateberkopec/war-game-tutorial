@@ -6,6 +6,9 @@ import { createButton, createTextInput } from '../text'
 import { getReplayManager, type ReplayMetadata } from '../../persistence/replays'
 import type { Replay, RulePreset } from '../../engine/types'
 import { getPresetNames, describePreset } from '../../engine/presets'
+import { getProfileManager } from '../../persistence/profiles'
+import { calculateWinRate, formatDuration, getRankTitle } from '../../persistence/stats'
+import type { PlayerProfile } from '../../persistence/types'
 
 /**
  * Player info collected from the title screen.
@@ -49,6 +52,7 @@ export class TitleScreen {
   private seedInput: HTMLInputElement | null = null
   private selectedPreset: RulePreset = 'classic'
   private replayModal: HTMLElement | null = null
+  private statsModal: HTMLElement | null = null
 
   constructor(config: TitleScreenConfig = {}) {
     this.onStartCallback = config.onStart
@@ -152,7 +156,7 @@ export class TitleScreen {
     buttonsContainer.style.cssText = `
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 12px;
       align-items: center;
       margin-top: 20px;
     `
@@ -164,16 +168,34 @@ export class TitleScreen {
     startButton.style.padding = '16px 48px'
     startButton.style.pointerEvents = 'auto'
 
+    // Secondary buttons row
+    const secondaryRow = document.createElement('div')
+    secondaryRow.style.cssText = `
+      display: flex;
+      gap: 12px;
+    `
+
+    // View Stats button
+    const statsButton = createButton('VIEW STATS', () => this.showStatsModal(), {
+      fontSize: '16px'
+    })
+    statsButton.style.padding = '10px 24px'
+    statsButton.style.pointerEvents = 'auto'
+    statsButton.style.background = 'linear-gradient(180deg, #457b9d 0%, #1d3557 100%)'
+
     // Watch Replay button
     const watchReplayButton = createButton('WATCH REPLAY', () => this.showReplayList(), {
-      fontSize: '18px'
+      fontSize: '16px'
     })
     watchReplayButton.style.padding = '10px 24px'
     watchReplayButton.style.pointerEvents = 'auto'
     watchReplayButton.style.background = 'linear-gradient(180deg, #457b9d 0%, #1d3557 100%)'
 
+    secondaryRow.appendChild(statsButton)
+    secondaryRow.appendChild(watchReplayButton)
+
     buttonsContainer.appendChild(startButton)
-    buttonsContainer.appendChild(watchReplayButton)
+    buttonsContainer.appendChild(secondaryRow)
 
     // Assemble
     this.container.appendChild(title)
@@ -418,6 +440,202 @@ export class TitleScreen {
     })
   }
 
+  private showStatsModal(): void {
+    // Create modal
+    const modal = document.createElement('div')
+    modal.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 300;
+    `
+
+    const content = document.createElement('div')
+    content.style.cssText = `
+      background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+      border: 2px solid #457b9d;
+      border-radius: 12px;
+      padding: 30px;
+      max-width: 700px;
+      max-height: 80vh;
+      overflow-y: auto;
+      width: 90%;
+    `
+
+    const title = document.createElement('h2')
+    title.textContent = 'Player Statistics'
+    title.style.cssText = `
+      color: #ffffff;
+      margin: 0 0 20px 0;
+      text-align: center;
+    `
+
+    const profileManager = getProfileManager()
+    const profiles = profileManager.listProfiles()
+
+    if (profiles.length === 0) {
+      const noProfiles = document.createElement('p')
+      noProfiles.textContent = 'No player profiles yet. Complete games to build your statistics!'
+      noProfiles.style.cssText = `
+        color: #888;
+        text-align: center;
+        margin: 40px 0;
+      `
+      content.appendChild(title)
+      content.appendChild(noProfiles)
+    } else {
+      const list = document.createElement('div')
+      list.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      `
+
+      // Sort by games played (most active first)
+      profiles.sort((a, b) => b.stats.gamesPlayed - a.stats.gamesPlayed)
+
+      for (const profile of profiles) {
+        const card = this.createProfileCard(profile)
+        list.appendChild(card)
+      }
+
+      content.appendChild(title)
+      content.appendChild(list)
+    }
+
+    // Close button
+    const closeBtn = createButton('Close', () => {
+      modal.remove()
+      this.statsModal = null
+    }, { fontSize: '16px' })
+    closeBtn.style.marginTop = '20px'
+    closeBtn.style.width = '100%'
+    closeBtn.style.pointerEvents = 'auto'
+
+    content.appendChild(closeBtn)
+    modal.appendChild(content)
+
+    // Close on background click
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.remove()
+        this.statsModal = null
+      }
+    })
+
+    document.body.appendChild(modal)
+    this.statsModal = modal
+  }
+
+  private createProfileCard(profile: PlayerProfile): HTMLElement {
+    const card = document.createElement('div')
+    card.style.cssText = `
+      background: rgba(69, 123, 157, 0.2);
+      border: 1px solid #457b9d;
+      border-radius: 8px;
+      padding: 20px;
+    `
+
+    // Header row
+    const header = document.createElement('div')
+    header.style.cssText = `
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    `
+
+    const nameSection = document.createElement('div')
+    
+    const name = document.createElement('h3')
+    name.textContent = profile.name
+    name.style.cssText = `
+      color: #ffffff;
+      margin: 0;
+      font-size: 20px;
+    `
+
+    const rank = document.createElement('span')
+    rank.textContent = getRankTitle(profile.stats)
+    rank.style.cssText = `
+      color: #a8dadc;
+      font-size: 14px;
+    `
+
+    nameSection.appendChild(name)
+    nameSection.appendChild(rank)
+
+    const winRate = document.createElement('div')
+    const winRateValue = calculateWinRate(profile.stats)
+    winRate.textContent = `${winRateValue}% Win Rate`
+    winRate.style.cssText = `
+      color: ${winRateValue >= 50 ? '#5cb85c' : '#d9534f'};
+      font-weight: bold;
+      font-size: 18px;
+    `
+
+    header.appendChild(nameSection)
+    header.appendChild(winRate)
+
+    // Stats grid
+    const statsGrid = document.createElement('div')
+    statsGrid.style.cssText = `
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    `
+
+    const stats = profile.stats
+    const statsData = [
+      { label: 'Games Played', value: stats.gamesPlayed.toString() },
+      { label: 'Wins / Losses', value: `${stats.gamesWon} / ${stats.gamesLost}` },
+      { label: 'Best Win Streak', value: stats.bestWinStreak.toString() },
+      { label: 'Current Streak', value: stats.winStreak.toString() },
+      { label: 'Wars Won', value: `${stats.totalWarsWon}/${stats.totalWarsFought}` },
+      { label: 'Longest War', value: `${stats.longestWarChain} deep` },
+      { label: 'Most Wars in Game', value: stats.mostWarsInGame.toString() },
+      { label: 'Fastest Win', value: stats.fastestWin ? formatDuration(stats.fastestWin) : '-' },
+      { label: 'Longest Game', value: stats.longestGame ? formatDuration(stats.longestGame) : '-' },
+    ]
+
+    for (const stat of statsData) {
+      const statEl = document.createElement('div')
+      statEl.style.cssText = `
+        text-align: center;
+      `
+
+      const value = document.createElement('div')
+      value.textContent = stat.value
+      value.style.cssText = `
+        color: #ffffff;
+        font-size: 16px;
+        font-weight: bold;
+      `
+
+      const label = document.createElement('div')
+      label.textContent = stat.label
+      label.style.cssText = `
+        color: #888;
+        font-size: 12px;
+      `
+
+      statEl.appendChild(value)
+      statEl.appendChild(label)
+      statsGrid.appendChild(statEl)
+    }
+
+    card.appendChild(header)
+    card.appendChild(statsGrid)
+
+    return card
+  }
+
   private showReplayList(): void {
     // Create modal
     const modal = document.createElement('div')
@@ -571,7 +789,7 @@ export class TitleScreen {
     wars.textContent = `${metadata.warsCount} wars`
 
     const duration = document.createElement('span')
-    duration.textContent = this.formatDuration(metadata.duration)
+    duration.textContent = this.formatReplayDuration(metadata.duration)
 
     bottomRow.appendChild(winner)
     bottomRow.appendChild(rounds)
@@ -594,7 +812,7 @@ export class TitleScreen {
     return item
   }
 
-  private formatDuration(ms: number): string {
+  private formatReplayDuration(ms: number): string {
     const seconds = Math.floor(ms / 1000)
     const minutes = Math.floor(seconds / 60)
     if (minutes > 0) {
@@ -647,6 +865,8 @@ export class TitleScreen {
   dispose(): void {
     this.replayModal?.remove()
     this.replayModal = null
+    this.statsModal?.remove()
+    this.statsModal = null
     this.container.remove()
   }
 }
