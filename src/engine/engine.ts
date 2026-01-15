@@ -34,6 +34,9 @@ import {
   initWarState,
   WarState,
 } from './war'
+import { createGameHistory, GameHistory } from './history'
+import { getPreset } from './presets'
+import type { RulePreset } from './types'
 
 // =============================================================================
 // Default Configuration
@@ -93,9 +96,7 @@ export class WarGameEngine implements IWarGameEngine {
   private emitter: EventEmitter
   private state: GameState
   private rng: Rng
-  private history: GameEvent[] = []
-  // Used in Phase 2 for undo/redo
-  private _historyIndex: number = 0
+  private gameHistory: GameHistory
   private stats: GameStats
   private startTime: number = 0
   private lastRoundTime: number = 0
@@ -104,6 +105,7 @@ export class WarGameEngine implements IWarGameEngine {
   constructor(config: Partial<GameConfig> = {}) {
     this.emitter = new EventEmitter()
     this.rng = createRng(config.seed)
+    this.gameHistory = createGameHistory()
 
     const fullConfig: GameConfig = { ...DEFAULT_CONFIG, ...config }
 
@@ -128,9 +130,9 @@ export class WarGameEngine implements IWarGameEngine {
   // Static Factory Methods
   // ===========================================================================
 
-  static fromPreset(_preset: string): WarGameEngine {
-    // Presets will be defined in presets.ts - for now use default
-    return new WarGameEngine()
+  static fromPreset(preset: RulePreset): WarGameEngine {
+    const config = getPreset(preset)
+    return new WarGameEngine(config)
   }
 
   static fromSave(save: SavedGame): WarGameEngine {
@@ -158,8 +160,7 @@ export class WarGameEngine implements IWarGameEngine {
   }
 
   private emit(event: GameEvent): void {
-    this.history.push(event)
-    this._historyIndex = this.history.length
+    this.gameHistory.recordEvent(event)
     this.emitter.emit(event)
   }
 
@@ -241,6 +242,9 @@ export class WarGameEngine implements IWarGameEngine {
   }
 
   private handleNormalDraw(): void {
+    // Create checkpoint at round start for undo functionality
+    this.gameHistory.createCheckpoint(this.state, this.state.currentRound)
+
     this.state.currentRound++
 
     this.emit({ type: 'roundStarted', roundNumber: this.state.currentRound })
@@ -644,8 +648,8 @@ export class WarGameEngine implements IWarGameEngine {
     return {
       id: this.state.id,
       savedAt: Date.now(),
-      state: { ...this.state },
-      history: [...this.history],
+      state: deepCloneState(this.state),
+      history: this.gameHistory.getAllEvents(),
       playerProfiles: [
         this.state.players.player1.profileId,
         this.state.players.player2.profileId,
@@ -654,9 +658,8 @@ export class WarGameEngine implements IWarGameEngine {
   }
 
   load(save: SavedGame): void {
-    this.state = { ...save.state }
-    this.history = [...save.history]
-    this._historyIndex = this.history.length
+    this.state = deepCloneState(save.state)
+    this.gameHistory.loadFromSave(save.history)
     this.rng.setState(deserializeRngState(this.state.rngState))
 
     this.emit({ type: 'stateRestored', fromSave: true })
@@ -672,33 +675,115 @@ export class WarGameEngine implements IWarGameEngine {
         { name: this.state.players.player1.name, profileId: this.state.players.player1.profileId },
         { name: this.state.players.player2.name, profileId: this.state.players.player2.profileId },
       ],
-      events: [...this.history],
+      events: this.gameHistory.getAllEvents(),
       stats: { ...this.stats },
       duration: this.stats.duration,
     }
   }
 
+  /**
+   * Get the event history for inspection.
+   */
+  getHistory(): GameEvent[] {
+    return this.gameHistory.getAllEvents()
+  }
+
+  /**
+   * Get current position in history.
+   */
+  getHistoryIndex(): number {
+    return this.gameHistory.getCurrentIndex()
+  }
+
   // ===========================================================================
-  // Undo/Redo (Phase 2 full implementation)
+  // Undo/Redo
   // ===========================================================================
 
   canUndo(): boolean {
-    // Simplified for Phase 1 - full implementation in Phase 2
-    // Will use _historyIndex to track position in history
-    return this._historyIndex > 0 && false
+    return this.gameHistory.canUndo()
   }
 
   canRedo(): boolean {
-    return this._historyIndex < this.history.length && false
+    return this.gameHistory.canRedo()
   }
 
+  /**
+   * Undo to the previous round start.
+   * Restores game state from the most recent checkpoint.
+   */
   undo(): void {
-    // Phase 2 implementation
-    throw new Error('Undo not implemented - coming in Phase 2')
+    if (!this.canUndo()) {
+      throw new Error('Cannot undo - no previous checkpoint available')
+    }
+
+    const checkpoint = this.gameHistory.getPreviousCheckpoint()
+    if (!checkpoint) {
+      throw new Error('Cannot undo - no checkpoint found')
+    }
+
+    // Restore state from checkpoint
+    this.state = deepCloneState(checkpoint.state)
+    this.rng.setState(deserializeRngState(this.state.rngState))
+    this.warState = null
+    this.gameHistory.restoreToCheckpoint(checkpoint)
+
+    this.emitter.emit({ type: 'stateRestored', fromSave: false })
   }
 
+  /**
+   * Redo previously undone actions.
+   * Replays events from current position to next checkpoint or end.
+   */
   redo(): void {
-    // Phase 2 implementation
-    throw new Error('Redo not implemented - coming in Phase 2')
+    if (!this.canRedo()) {
+      throw new Error('Cannot redo - no events to replay')
+    }
+
+    const events = this.gameHistory.getRedoEvents()
+    if (events.length === 0) {
+      return
+    }
+
+    // Re-emit the events (they're already in history)
+    for (const event of events) {
+      this.emitter.emit(event)
+    }
+
+    this.gameHistory.advanceIndex(events.length)
+  }
+}
+
+// =============================================================================
+// Helper Functions
+// =============================================================================
+
+/**
+ * Deep clone a game state.
+ */
+function deepCloneState(state: GameState): GameState {
+  return {
+    id: state.id,
+    config: { ...state.config },
+    phase: state.phase,
+    players: {
+      player1: {
+        ...state.players.player1,
+        deck: [...state.players.player1.deck],
+      },
+      player2: {
+        ...state.players.player2,
+        deck: [...state.players.player2.deck],
+      },
+    },
+    battlefield: {
+      player1FaceUp: state.battlefield.player1FaceUp,
+      player2FaceUp: state.battlefield.player2FaceUp,
+      player1FaceDown: [...state.battlefield.player1FaceDown],
+      player2FaceDown: [...state.battlefield.player2FaceDown],
+      warPile: [...state.battlefield.warPile],
+    },
+    currentRound: state.currentRound,
+    warDepth: state.warDepth,
+    rngState: state.rngState,
   }
 }
