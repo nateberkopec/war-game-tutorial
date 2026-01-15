@@ -51,13 +51,13 @@ async function init(): Promise<void> {
   )
 
   // Show title screen and wait for player names
-  showTitleScreen({
+  const result = await showTitleScreen({
     defaultPlayer1Name: 'Player 1',
     defaultPlayer2Name: 'Player 2',
-    onStart: (result) => {
-      startGame(result.player1Name, result.player2Name)
-    }
   })
+  
+  // Start the game with the player names
+  startGame(result.player1Name, result.player2Name)
 }
 
 // =============================================================================
@@ -66,6 +66,14 @@ async function init(): Promise<void> {
 
 async function startGame(player1Name: string, player2Name: string): Promise<void> {
   console.log(`Starting game: ${player1Name} vs ${player2Name}`)
+
+  // Clean up previous game UI if any
+  if (gameUI) {
+    gameUI.scene.dispose()
+    gameUI.textManager.dispose()
+    gameUI.inputManager.dispose()
+    gameUI = null
+  }
 
   // Create engine
   engine = new WarGameEngine()
@@ -300,26 +308,21 @@ async function handleGameEnd(winner: PlayerId, stats: GameStats): Promise<void> 
     winnerName,
     winnerId: winner,
     stats,
-    onPlayAgain: () => {
+    onPlayAgain: async () => {
       victoryScreen.hide()
       victoryScreen.dispose()
       // Show title screen again
-      showTitleScreen({
+      const result = await showTitleScreen({
         defaultPlayer1Name: state.players.player1.name,
         defaultPlayer2Name: state.players.player2.name,
-        onStart: (result) => {
-          startGame(result.player1Name, result.player2Name)
-        }
       })
+      startGame(result.player1Name, result.player2Name)
     },
-    onMainMenu: () => {
+    onMainMenu: async () => {
       victoryScreen.hide()
       victoryScreen.dispose()
-      showTitleScreen({
-        onStart: (result) => {
-          startGame(result.player1Name, result.player2Name)
-        }
-      })
+      const result = await showTitleScreen({})
+      startGame(result.player1Name, result.player2Name)
     }
   })
   victoryScreen.show()
@@ -342,25 +345,20 @@ async function handleGameDraw(reason: string, stats: GameStats): Promise<void> {
     winnerName: "It's a Draw!",
     winnerId: 'player1', // Arbitrary for draws
     stats,
-    onPlayAgain: () => {
+    onPlayAgain: async () => {
       victoryScreen.hide()
       victoryScreen.dispose()
-      showTitleScreen({
+      const result = await showTitleScreen({
         defaultPlayer1Name: state.players.player1.name,
         defaultPlayer2Name: state.players.player2.name,
-        onStart: (result) => {
-          startGame(result.player1Name, result.player2Name)
-        }
       })
+      startGame(result.player1Name, result.player2Name)
     },
-    onMainMenu: () => {
+    onMainMenu: async () => {
       victoryScreen.hide()
       victoryScreen.dispose()
-      showTitleScreen({
-        onStart: (result) => {
-          startGame(result.player1Name, result.player2Name)
-        }
-      })
+      const result = await showTitleScreen({})
+      startGame(result.player1Name, result.player2Name)
     }
   })
   victoryScreen.show()
