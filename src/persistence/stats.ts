@@ -5,7 +5,7 @@
  * based on game results.
  */
 
-import type { ProfileStats, GameStats, GameSummary } from './types'
+import type { ProfileStats, GameSummary } from './types'
 
 /** Calculate win rate as a percentage (0-100) */
 export function calculateWinRate(stats: ProfileStats): number {
