@@ -164,18 +164,39 @@ export function addToBottom(
 // Card Comparison
 // =============================================================================
 
+/** Pre-computed rank value lookup for ace-high (default) */
+const ACE_HIGH_RANK_VALUES: Record<Rank, number> = {
+  '2': 0, '3': 1, '4': 2, '5': 3, '6': 4, '7': 5, '8': 6, '9': 7,
+  '10': 8, 'J': 9, 'Q': 10, 'K': 11, 'A': 12,
+}
+
+/** Pre-computed rank value lookup for ace-low */
+const ACE_LOW_RANK_VALUES: Record<Rank, number> = {
+  'A': 0, '2': 1, '3': 2, '4': 3, '5': 4, '6': 5, '7': 6, '8': 7,
+  '9': 8, '10': 9, 'J': 10, 'Q': 11, 'K': 12,
+}
+
+/** Pre-computed suit value lookup (default order) */
+const DEFAULT_SUIT_VALUES: Record<Suit, number> = {
+  'hearts': 0, 'diamonds': 1, 'clubs': 2, 'spades': 3,
+}
+
 /**
  * Get the numeric value of a rank for comparison.
+ * Optimized with pre-computed lookup tables for common cases.
  * @param rank - Card rank
  * @param config - Game config for ace-high and custom rank order
  */
 export function getRankValue(rank: Rank, config: GameConfig): number {
-  const rankOrder = config.customRankOrder ?? DEFAULT_RANK_ORDER
+  // Fast path: use pre-computed lookup for standard rank orders
+  if (!config.customRankOrder) {
+    return config.aceHigh ? ACE_HIGH_RANK_VALUES[rank] : ACE_LOW_RANK_VALUES[rank]
+  }
 
-  // If aceHigh is false, move Ace to the beginning (lowest)
+  // Slow path: custom rank order requires indexOf
+  const rankOrder = config.customRankOrder
   let order: readonly Rank[]
   if (!config.aceHigh) {
-    // A,2,3,4,5,6,7,8,9,10,J,Q,K
     order = ['A', ...rankOrder.filter((r) => r !== 'A')]
   } else {
     order = rankOrder
@@ -190,8 +211,13 @@ export function getRankValue(rank: Rank, config: GameConfig): number {
  * @param config - Game config for suit order
  */
 export function getSuitValue(suit: Suit, config: GameConfig): number {
-  const suitOrder = config.suitOrder ?? SUITS
-  return suitOrder.indexOf(suit)
+  // Fast path: use pre-computed lookup for default suit order
+  if (!config.suitOrder) {
+    return DEFAULT_SUIT_VALUES[suit]
+  }
+
+  // Slow path: custom suit order
+  return config.suitOrder.indexOf(suit)
 }
 
 export type CompareResult = PlayerId | 'tie'
@@ -224,4 +250,64 @@ export function compareCards(
   }
 
   return 'tie'
+}
+
+/**
+ * Pre-computed card comparator for optimal performance.
+ * Create once with a config and reuse for many comparisons.
+ */
+export class CardComparator {
+  private rankValues: Record<Rank, number>
+  private suitValues: Record<Suit, number>
+  private suitsRank: boolean
+
+  constructor(config: GameConfig) {
+    this.suitsRank = config.suitsRank
+
+    // Pre-compute rank values
+    if (!config.customRankOrder) {
+      this.rankValues = config.aceHigh ? ACE_HIGH_RANK_VALUES : ACE_LOW_RANK_VALUES
+    } else {
+      const rankOrder = config.customRankOrder
+      const order: Rank[] = config.aceHigh
+        ? [...rankOrder]
+        : ['A', ...rankOrder.filter((r) => r !== 'A')]
+
+      this.rankValues = {} as Record<Rank, number>
+      order.forEach((rank, index) => {
+        this.rankValues[rank] = index
+      })
+    }
+
+    // Pre-compute suit values
+    if (!config.suitOrder) {
+      this.suitValues = DEFAULT_SUIT_VALUES
+    } else {
+      this.suitValues = {} as Record<Suit, number>
+      config.suitOrder.forEach((suit, index) => {
+        this.suitValues[suit] = index
+      })
+    }
+  }
+
+  /**
+   * Compare two cards using pre-computed values.
+   */
+  compare(card1: Card, card2: Card): CompareResult {
+    const rank1 = this.rankValues[card1.rank]
+    const rank2 = this.rankValues[card2.rank]
+
+    if (rank1 > rank2) return 'player1'
+    if (rank2 > rank1) return 'player2'
+
+    if (this.suitsRank) {
+      const suit1 = this.suitValues[card1.suit]
+      const suit2 = this.suitValues[card2.suit]
+
+      if (suit1 > suit2) return 'player1'
+      if (suit2 > suit1) return 'player2'
+    }
+
+    return 'tie'
+  }
 }

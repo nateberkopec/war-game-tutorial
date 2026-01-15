@@ -153,6 +153,7 @@ export type GameEvent =
   | { type: 'warResolved'; winner: PlayerId; totalCards: number }
   | { type: 'insufficientCards'; player: PlayerId; needed: number; had: number }
   | { type: 'gameEnded'; winner: PlayerId; stats: GameStats }
+  | { type: 'gameDraw'; reason: 'simultaneousElimination' | 'roundsTie'; stats: GameStats }
   | { type: 'deckShuffled'; player: PlayerId }
   | { type: 'stateRestored'; fromSave: boolean }
 

@@ -51,6 +51,7 @@ export {
   getRankValue,
   getSuitValue,
   compareCards,
+  CardComparator,
 } from './deck'
 
 // RNG

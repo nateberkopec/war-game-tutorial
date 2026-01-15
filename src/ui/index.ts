@@ -13,7 +13,25 @@ export type { Rank, Suit, CardConfig } from './card'
 export { generateCardFaceTexture, generateCardBackTexture, clearTextureCache, preloadAllTextures } from './card-textures'
 
 // Layout
-export { LAYOUT, UI_POSITIONS, CAMERA_POSITIONS, getCardTableRotation, getDeckStackRotation, getStackedCardPosition, getResponsiveScale } from './layout'
+export {
+  LAYOUT,
+  UI_POSITIONS,
+  CAMERA_POSITIONS,
+  getCardTableRotation,
+  getDeckStackRotation,
+  getStackedCardPosition,
+  getResponsiveScale,
+  detectDeviceType,
+  isPortrait,
+  isMobile,
+  getMobileConfig,
+  getResponsiveLayout,
+  getResponsiveUIPositions,
+  getResponsiveCameraConfig,
+  applyMobileStyles,
+  createResponsiveHandler
+} from './layout'
+export type { DeviceType, MobileLayoutConfig } from './layout'
 
 // Game scene
 export { GameScene, createDefaultGameScene } from './game-scene'
@@ -43,5 +61,13 @@ export { UITextManager, createButton, createTextInput } from './text'
 export type { TextConfig, TextPosition } from './text'
 
 // Screens
-export { TitleScreen, showTitleScreen, VictoryScreen, showVictoryScreen } from './screens'
-export type { TitleScreenResult, TitleScreenConfig, VictoryScreenConfig } from './screens'
+export { TitleScreen, showTitleScreen, VictoryScreen, showVictoryScreen, LoadingScreen, withLoadingScreen, showLoadingScreen } from './screens'
+export type { TitleScreenResult, TitleScreenConfig, VictoryScreenConfig, LoadingScreenConfig } from './screens'
+
+// Effects
+export { ConfettiEffect, fireConfetti, fireSideConfetti, CardScatterEffect, fireCardScatter, fireCardScatterAt } from './effects'
+export type { ConfettiConfig, CardScatterConfig } from './effects'
+
+// Input
+export { InputManager, waitForAnyInput } from './input'
+export type { InputEvent, InputEventType, InputCallback, InputConfig } from './input'
