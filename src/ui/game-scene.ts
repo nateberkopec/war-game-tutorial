@@ -3,6 +3,9 @@ import { SceneManager } from './scene'
 import { CardMesh, createDeckStack, Rank, Suit } from './card'
 import { generateCardFaceTexture, generateCardBackTexture, preloadAllTextures } from './card-textures'
 import { LAYOUT, getCardTableRotation } from './layout'
+import { Animator, Easing } from './animations'
+import { createArcMoveAnimation, createDealAnimation } from './animations/card-move'
+import { createCardFlipAnimation } from './animations/card-flip'
 
 /**
  * GameScene manages the visual representation of the War card game.
@@ -16,14 +19,19 @@ export class GameScene {
   private player2BattleCard: CardMesh | null = null
   private warPileGroup: THREE.Group
   private tableGroup: THREE.Group
+  private animator: Animator
 
   constructor(container?: HTMLElement) {
     this.sceneManager = new SceneManager(container)
     this.warPileGroup = new THREE.Group()
     this.tableGroup = new THREE.Group()
+    this.animator = new Animator()
     
     this.sceneManager.add(this.warPileGroup)
     this.sceneManager.add(this.tableGroup)
+    
+    // Hook animator into render loop
+    this.sceneManager.onRender(() => this.animator.update())
     
     // Preload all card textures
     preloadAllTextures()
@@ -92,9 +100,10 @@ export class GameScene {
   }
 
   /**
-   * Show a card on the battlefield for a player.
+   * Show a card on the battlefield for a player with animation.
+   * Returns a promise that resolves when the animation completes.
    */
-  showBattleCard(player: 'player1' | 'player2', rank: Rank, suit: Suit, faceUp: boolean = true): void {
+  async showBattleCard(player: 'player1' | 'player2', rank: Rank, suit: Suit, faceUp: boolean = true): Promise<void> {
     const faceTexture = generateCardFaceTexture(rank, suit)
     const backTexture = generateCardBackTexture()
     
@@ -105,21 +114,19 @@ export class GameScene {
       backTexture
     })
     
-    const position = player === 'player1' ? LAYOUT.player1Battle : LAYOUT.player2Battle
-    card.position.copy(position)
+    // Get deck and battle positions
+    const deckPosition = player === 'player1' ? LAYOUT.player1Deck : LAYOUT.player2Deck
+    const battlePosition = player === 'player1' ? LAYOUT.player1Battle : LAYOUT.player2Battle
+    
+    // Start at deck position, face down
+    card.position.copy(deckPosition)
+    card.position.z += 0.3 // Slightly above deck
     
     // Lay card flat on table
     const tableRotation = getCardTableRotation()
     card.rotation.x = tableRotation.x
     card.rotation.z = tableRotation.z
-    
-    // Set face up/down (Y rotation)
-    card.setFaceUp(faceUp)
-    if (faceUp) {
-      card.rotation.y = 0
-    } else {
-      card.rotation.y = Math.PI
-    }
+    card.rotation.y = Math.PI // Face down initially
     
     // Remove existing battle card if any
     if (player === 'player1') {
@@ -137,12 +144,81 @@ export class GameScene {
     }
     
     this.sceneManager.add(card)
+    
+    // Animate card from deck to battlefield
+    const moveAnimation = createDealAnimation(card, deckPosition, battlePosition, {
+      duration: 300,
+      arcHeight: 0.8
+    })
+    
+    await this.animator.play(moveAnimation)
+    
+    // If face up, flip the card
+    if (faceUp) {
+      const flipAnimation = createCardFlipAnimation(card, true, { duration: 250 })
+      await this.animator.play(flipAnimation)
+    }
   }
 
   /**
    * Clear battlefield cards (after round resolution).
    */
   clearBattlefield(): void {
+    if (this.player1BattleCard) {
+      this.sceneManager.remove(this.player1BattleCard)
+      this.player1BattleCard.disposeCard()
+      this.player1BattleCard = null
+    }
+    if (this.player2BattleCard) {
+      this.sceneManager.remove(this.player2BattleCard)
+      this.player2BattleCard.disposeCard()
+      this.player2BattleCard = null
+    }
+  }
+
+  /**
+   * Animate battlefield cards being collected to winner's deck.
+   * Returns a promise that resolves when the animation completes.
+   */
+  async collectCardsToWinner(winner: 'player1' | 'player2'): Promise<void> {
+    const winnerDeckPosition = winner === 'player1' ? LAYOUT.player1Deck : LAYOUT.player2Deck
+    const cards: CardMesh[] = []
+    
+    if (this.player1BattleCard) {
+      cards.push(this.player1BattleCard)
+    }
+    if (this.player2BattleCard) {
+      cards.push(this.player2BattleCard)
+    }
+    
+    if (cards.length === 0) return
+    
+    // First flip cards face down
+    const flipPromises = cards.map(card => {
+      if (card.faceUp) {
+        const flipAnimation = createCardFlipAnimation(card, false, { duration: 150 })
+        return this.animator.play(flipAnimation)
+      }
+      return Promise.resolve()
+    })
+    await Promise.all(flipPromises)
+    
+    // Then animate all cards to winner's deck in parallel
+    const movePromises = cards.map((card, index) => {
+      const targetPosition = winnerDeckPosition.clone()
+      targetPosition.z += 0.2 + index * 0.05 // Stack on top of deck
+      
+      const moveAnimation = createArcMoveAnimation(card, targetPosition, {
+        duration: 350,
+        arcHeight: 0.6,
+        easing: Easing.easeInOutCubic
+      })
+      return this.animator.play(moveAnimation)
+    })
+    
+    await Promise.all(movePromises)
+    
+    // Clean up after animation
     if (this.player1BattleCard) {
       this.sceneManager.remove(this.player1BattleCard)
       this.player1BattleCard.disposeCard()

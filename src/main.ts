@@ -30,6 +30,11 @@ interface GameUI {
 let engine: WarGameEngine | null = null
 let gameUI: GameUI | null = null
 
+// Track round winner for animation purposes
+let lastRoundWinner: PlayerId | null = null
+// Track drawn cards for animation
+let pendingCardAnimations: Array<{ player: 'player1' | 'player2', rank: Rank, suit: Suit }> = []
+
 // =============================================================================
 // Initialization
 // =============================================================================
@@ -163,21 +168,13 @@ function setupEngineEventHandlers(): void {
   })
 
   engine.on('cardsDrawn', (event) => {
-    if (event.type === 'cardsDrawn' && gameUI) {
+    if (event.type === 'cardsDrawn') {
       const { cards } = event
-      // Show cards face up
-      gameUI.scene.showBattleCard(
-        'player1',
-        cards.player1.rank as Rank,
-        cards.player1.suit as Suit,
-        true
-      )
-      gameUI.scene.showBattleCard(
-        'player2',
-        cards.player2.rank as Rank,
-        cards.player2.suit as Suit,
-        true
-      )
+      // Queue card animations to be played after engine.draw() completes
+      pendingCardAnimations = [
+        { player: 'player1', rank: cards.player1.rank as Rank, suit: cards.player1.suit as Suit },
+        { player: 'player2', rank: cards.player2.rank as Rank, suit: cards.player2.suit as Suit }
+      ]
     }
   })
 
@@ -194,6 +191,8 @@ function setupEngineEventHandlers(): void {
       const state = engine.getState()
       const winnerName = state.players[event.winner].name
       gameUI.textManager.showAnnouncement(`${winnerName} wins!`, 1000)
+      // Track winner for collect animation
+      lastRoundWinner = event.winner
     }
   })
 
@@ -241,7 +240,11 @@ async function gameLoop(): Promise<void> {
   // Wait for user input
   await waitForAnyInput()
 
-  // Execute draw
+  // Reset tracking variables
+  lastRoundWinner = null
+  pendingCardAnimations = []
+
+  // Execute draw (this populates pendingCardAnimations and lastRoundWinner via events)
   try {
     engine.draw()
   } catch (error) {
@@ -249,16 +252,34 @@ async function gameLoop(): Promise<void> {
     return
   }
 
-  // Update UI
+  // Animate cards being drawn from decks to battlefield
+  if (pendingCardAnimations.length > 0 && gameUI) {
+    // Animate both cards in parallel
+    await Promise.all(
+      pendingCardAnimations.map(({ player, rank, suit }) =>
+        gameUI!.scene.showBattleCard(player, rank, suit, true)
+      )
+    )
+  }
+
+  // Update UI (deck counts)
   updateUI()
 
-  // Small delay for visual feedback
-  await new Promise((resolve) => setTimeout(resolve, 500))
+  // Small delay to show the result
+  await new Promise((resolve) => setTimeout(resolve, 800))
 
   // Clear battlefield for next round (unless in war)
   const newState = engine.getState()
-  if (newState.phase === 'playing') {
-    gameUI.scene.clearBattlefield()
+  if (newState.phase === 'playing' && gameUI) {
+    // Animate cards going back to winner's deck
+    if (lastRoundWinner) {
+      await gameUI.scene.collectCardsToWinner(lastRoundWinner)
+    } else {
+      // Fallback: just clear without animation
+      gameUI.scene.clearBattlefield()
+    }
+    // Update deck visuals after cards collected
+    updateUI()
   }
 
   // Continue game loop if not finished
