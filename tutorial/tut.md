@@ -105,5 +105,8 @@ I have some fancy scripts I've used for setting up git worktrees here and then l
 
 PROMPT:
 ```
-
+Let's think, how are they gonna coordinate? I'd like to use git, github, git worktrees, and 4 opencode windows. Write out our coordination strategy at the top of PLAN.md.
 ```
+
+Ok 15 minutes left fuck, time to motor. Let's launch this fucker and go.
+

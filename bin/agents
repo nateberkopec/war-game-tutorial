@@ -17,9 +17,10 @@ function usage
     gum style --foreground 12 --bold "bin/agents - Launch parallel AI coding agents for War game"
     echo ""
     gum style --foreground 7 "Usage:"
-    echo "  bin/agents          Launch all 4 agents in tmux"
-    echo "  bin/agents list     Show worktree status"
-    echo "  bin/agents nuke     Remove tmux session"
+    echo "  bin/agents              Launch all 4 agents in tmux with prompts"
+    echo "  bin/agents --dry-run    Launch agents without prompts (for testing)"
+    echo "  bin/agents list         Show worktree status"
+    echo "  bin/agents nuke         Remove tmux session"
     echo ""
     gum style --foreground 7 "Workstreams:"
     echo "  W1-Engine         src/engine/*"
@@ -165,6 +166,7 @@ Then STOP and wait for human to confirm before starting Phase 2.' > "$REPO_ROOT/
 end
 
 function launch_agents
+    set -l dry_run $argv[1]
     set -l session_name "war-agents"
     
     # Check if session already exists
@@ -213,16 +215,19 @@ function launch_agents
         tmux detach-client
     end
     
+    # Build the opencode command based on dry-run flag
+    set -l opencode_cmd "opencode"
+    if test "$dry_run" != "true"
+        set opencode_cmd "opencode --prompt 'Read .prompts/AGENT_PROMPT.md for your instructions. Follow them precisely.'"
+    end
+    
     # Create session with first worktree
     set -l first_entry $WORKTREES[1]
     set -l first_parts (string split ":" $first_entry)
     set -l first_path $first_parts[1]
     set -l first_name $first_parts[2]
     
-    # Use a here-string approach: opencode reads prompt from file via --prompt flag
-    # The prompt is a single line instruction to read the full prompt file
-    tmux new-session -d -s "$session_name" -c "$first_path" \
-        "opencode --prompt 'Read .prompts/AGENT_PROMPT.md for your instructions. Follow them precisely.'"
+    tmux new-session -d -s "$session_name" -c "$first_path" "$opencode_cmd"
     tmux select-pane -t "$session_name" -T "$first_name"
     
     # Add remaining worktrees as panes
@@ -232,8 +237,7 @@ function launch_agents
         set -l path $parts[1]
         set -l name $parts[2]
         
-        tmux split-window -t "$session_name" -c "$path" \
-            "opencode --prompt 'Read .prompts/AGENT_PROMPT.md for your instructions. Follow them precisely.'"
+        tmux split-window -t "$session_name" -c "$path" "$opencode_cmd"
         tmux select-pane -t "$session_name" -T "$name"
         tmux select-layout -t "$session_name" tiled
     end
@@ -267,7 +271,9 @@ end
 # Parse arguments
 switch "$argv[1]"
     case "" 
-        launch_agents
+        launch_agents false
+    case "--dry-run"
+        launch_agents true
     case "list"
         list_worktrees
     case "nuke"
