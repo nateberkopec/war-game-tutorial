@@ -17,3 +17,31 @@ export { LAYOUT, UI_POSITIONS, CAMERA_POSITIONS, getCardTableRotation, getDeckSt
 
 // Game scene
 export { GameScene, createDefaultGameScene } from './game-scene'
+
+// Animations
+export {
+  Animator,
+  Easing,
+  createDelay,
+  createTween,
+  createCardFlipAnimation,
+  createDramaticFlipAnimation,
+  createQuickFlipAnimation,
+  createMultiFlipAnimations,
+  createMoveAnimation,
+  createArcMoveAnimation,
+  createSlideAnimation,
+  createCollectAnimation,
+  createDealAnimation,
+  createShakeAnimation,
+  createRotationAnimation
+} from './animations'
+export type { Animation, EasingFunction, CardFlipConfig, CardMoveConfig } from './animations'
+
+// UI Text
+export { UITextManager, createButton, createTextInput } from './text'
+export type { TextConfig, TextPosition } from './text'
+
+// Screens
+export { TitleScreen, showTitleScreen, VictoryScreen, showVictoryScreen } from './screens'
+export type { TitleScreenResult, TitleScreenConfig, VictoryScreenConfig } from './screens'
