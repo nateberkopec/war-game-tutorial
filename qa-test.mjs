@@ -93,12 +93,18 @@ async function runTests() {
 
       // Test 7: Draw some cards
       console.log('\n--- Test: Draw Cards ---');
-      for (let i = 0; i < 3; i++) {
-        await page.click('body');
-        await page.waitForTimeout(800);
-        await page.screenshot({ path: `/tmp/war-05-draw-${i + 1}.png` });
+      try {
+        for (let i = 0; i < 3; i++) {
+          // Click on the canvas/body to trigger draw
+          await page.click('body', { timeout: 5000 });
+          await page.waitForTimeout(800);
+          await page.screenshot({ path: `/tmp/war-05-draw-${i + 1}.png` });
+          console.log(`   Draw ${i + 1} complete`);
+        }
+        test('Can draw cards (clicks work)', true);
+      } catch (err) {
+        test('Can draw cards (clicks work)', false, err.message);
       }
-      test('Can draw cards (clicks work)', true);
 
       // Check console for game events
       const hasGameEvents = consoleLogs.some(log => 
