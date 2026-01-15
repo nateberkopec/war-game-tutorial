@@ -122,6 +122,12 @@ describe('Full Game Flow', () => {
 
     let iterations = 0
     while (!gameEnded && iterations < maxRounds + 100) {
+      // Check state before drawing to avoid error when game just ended
+      const state = engine.getState()
+      if (state.phase === 'finished') {
+        gameEnded = true
+        break
+      }
       engine.draw()
       iterations++
     }
