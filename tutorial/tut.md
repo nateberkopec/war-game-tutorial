@@ -131,13 +131,11 @@ Here are the OpenCode sessions used to build this game. You can view the full co
 ### Phase 2: Parallel Implementation (Worktrees)
 
 - **W1 - Game Engine**: [https://opncd.ai/share/bJNSll0N](https://opncd.ai/share/bJNSll0N) - Core game engine implementation (deck, RNG, events, war resolution, win conditions)
-- **W2 - Persistence**: `ses_43e96d6a2ffeK7tmJXaivqQiRk` - LocalStorage adapter, Profile Manager, Stats, and Settings
-- **W3 - Rendering**: `ses_43e897e85ffelmFUwM5fv1i5ih` - Three.js scene, renderer, and card textures
-- **W4 - Infrastructure**: `ses_43e96d5b5ffeco0v6bpDN5j0Ov` - Vite, TypeScript, Vitest, CI workflow, itch.io packaging
+- **W2 - Persistence**: [https://opncd.ai/share/aivqQiRk](https://opncd.ai/share/aivqQiRk) - LocalStorage adapter, Profile Manager, Stats, and Settings
+- **W3 - Rendering**: [https://opncd.ai/share/5fv1i5ih](https://opncd.ai/share/5fv1i5ih) - Three.js scene, renderer, and card textures
+- **W4 - Infrastructure**: [https://opncd.ai/share/pDN5j0Ov](https://opncd.ai/share/pDN5j0Ov) - Vite, TypeScript, Vitest, CI workflow, itch.io packaging
 
 ### Phase 3: Feature Additions
 
-- **Feature Roadmap**: `ses_43ce741bbffeKlLCavxP4XX8kK` - Debug page, seed/rule preset, replay, stats on start screen
-- **PR Automation**: `ses_43ce6c7e6ffe38sPsCjOwjr4C2` - Auto-draw, delayed draw feedback, card draw animations
-
-Note: Sessions without share links can be shared by running `/share` in OpenCode while in that session, or by resuming the session with `opencode -s <session_id>` and then running `/share`.
+- **Feature Roadmap**: [https://opncd.ai/share/xP4XX8kK](https://opncd.ai/share/xP4XX8kK) - Debug page, seed/rule preset, replay, stats on start screen
+- **PR Automation**: [https://opncd.ai/share/jOwjr4C2](https://opncd.ai/share/jOwjr4C2) - Auto-draw, delayed draw feedback, card draw animations
